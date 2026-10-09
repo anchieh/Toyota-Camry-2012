@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camry 保養記錄</title>
+<style>
+:root {
+  --bg: #fafaf8; --fg: #1d1d1b; --muted: #77756f; --line: #e4e2dc;
+  --card: #ffffff; --accent: #c0392b; --ok: #2e7d4f; --warn: #b7791f;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #151514; --fg: #ecebe6; --muted: #98968f; --line: #2c2c2a;
+          --card: #1d1d1b; --accent: #ef6b5b; --ok: #5fbf88; --warn: #e0a84a; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.5 system-ui, -apple-system, "Noto Sans TC", "PingFang TC", sans-serif; }
+main { max-width: 640px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 32px 0 8px; letter-spacing: .04em; }
+.next { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+#drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 18px; text-align: center;
+  color: var(--muted); font-size: 14px; transition: .15s; }
+#drop.over { border-color: var(--fg); color: var(--fg); background: var(--card); }
+table { width: 100%; border-collapse: collapse; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+th, td { text-align: left; padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; font-size: 12px; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.flag { font-size: 12px; margin-left: 6px; white-space: nowrap; }
+.s { color: var(--muted); font-size: 12px; }
+td .s { display: block; }
+td.num { white-space: nowrap; }
+.flag.short { color: var(--accent); } .flag.long { color: var(--warn); }
+.row { display: flex; align-items: center; gap: 8px; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.row .t { flex: 1; min-width: 0; } .row .s { color: var(--muted); font-size: 12px; }
+button { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); }
+button:hover { border-color: var(--fg); }
+button.del { color: var(--accent); }
+details { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; }
+summary { cursor: pointer; padding: 10px 12px; display: flex; gap: 8px; align-items: center; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary .t { flex: 1; }
+details > .body { padding: 0 12px 10px; }
+.item { display: flex; gap: 8px; align-items: center; padding: 6px 0; font-size: 14px;
+  border-top: 1px solid var(--line); }
+.item .n { flex: 1; } .item .p { color: var(--muted); font-variant-numeric: tabular-nums; }
+.badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.badge.done { color: var(--ok); border-color: var(--ok); }
+.empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+#toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg);
+  color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: 14px; display: none;
+  gap: 12px; align-items: center; max-width: calc(100% - 32px); }
+#toast button { color: var(--bg); border-color: var(--bg); }
+footer { margin-top: 32px; font-size: 12px; color: var(--muted); }
+footer a { color: inherit; cursor: pointer; text-decoration: underline; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Camry 保養記錄</h1>
+  <p class="next" id="next"></p>
+
+  <div id="drop">把單據檔案拖到這裡</div>
+
+  <h2>項目</h2>
+  <div id="items"></div>
+
+  <h2>未處理</h2>
+  <div id="open"></div>
+
+  <h2>記錄（以里程為準）</h2>
+  <div id="records"></div>
+
+  <footer>里程相同即同一筆。<a id="reset">還原初始資料</a></footer>
+</main>
+<div id="toast"><span id="toastMsg"></span><button id="undo">復原</button></div>
+
+<script src="data.js"></script>
+<script>
+const KEY = "camry-records-v1";
+let recs = load();
+
+function load() {
+  try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {}
+  return structuredClone(window.SEED);
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(recs)); } catch (e) {} }
+
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null) el.append(kid);
+  return el;
+}
+const fmt = n => n.toLocaleString("en-US");
+const money = n => (n ? "$" + fmt(n) : "");
+function monthsAgo(iso) {
+  const d = (Date.now() - new Date(iso)) / 864e5;
+  return d < 45 ? Math.round(d) + " 天前" : Math.round(d / 30.4) + " 個月前";
+}
+
+// ---- 刪除與復原 ----
+let snapshot = null, toastTimer;
+function mutate(msg, fn) {
+  snapshot = JSON.stringify(recs);
+  fn(); save(); render();
+  const t = document.getElementById("toast");
+  document.getElementById("toastMsg").textContent = msg;
+  t.style.display = "flex";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.style.display = "none"), 8000);
+}
+document.getElementById("undo").onclick = () => {
+  if (!snapshot) return;
+  recs = JSON.parse(snapshot); snapshot = null; save(); render();
+  document.getElementById("toast").style.display = "none";
+};
+document.getElementById("reset").onclick = () => {
+  if (confirm("還原成初始資料？你的修改會消失。"))
+    mutate("已還原初始資料", () => { recs = structuredClone(window.SEED); });
+};
+
+// ---- 顯示 ----
+function render() {
+  recs.sort((a, b) => a.km - b.km);
+  renderNext(); renderItems(); renderOpen(); renderRecords();
+}
+
+function renderNext() {
+  const last = [...recs].reverse().find(r => r.items.some(i => i.status === "done"));
+  const el = document.getElementById("next");
+  if (!last) { el.textContent = ""; return; }
+  const d = new Date(last.date); d.setMonth(d.getMonth() + 6);
+  el.textContent = `下次保養約 ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}（上次 ${last.date}，${fmt(last.km)} 公里）`;
+}
+
+function renderItems() {
+  const by = {};
+  for (const r of recs) for (const i of r.items)
+    if (i.status === "done") (by[i.cat] ||= []).push(r);
+  const rows = Object.entries(by).map(([cat, rs]) => {
+    const last = rs.at(-1), prev = rs.at(-2);
+    const gap = prev ? last.km - prev.km : null;
+    const rule = (window.RULES || {})[cat] || {};
+    let flag = null;
+    if (gap != null && rule.min && gap < rule.min) flag = h("span", { class: "flag short" }, "偏短");
+    if (gap != null && rule.max && gap > rule.max) flag = h("span", { class: "flag long" }, "偏長");
+    return { last, tr: h("tr", {},
+      h("td", {}, cat),
+      h("td", {}, last.date, h("span", { class: "s" }, monthsAgo(last.date))),
+      h("td", { class: "num" }, fmt(last.km)),
+      h("td", { class: "num" }, gap == null ? "—" : fmt(gap), flag)) };
+  }).sort((a, b) => b.last.km - a.last.km);
+  const box = document.getElementById("items"); box.replaceChildren();
+  if (!rows.length) return box.append(h("div", { class: "empty" }, "還沒有施作記錄"));
+  box.append(h("table", {},
+    h("tr", {}, h("th", {}, "項目"), h("th", {}, "上次"), h("th", { class: "num" }, "里程"), h("th", { class: "num" }, "與前次間隔")),
+    rows.map(r => r.tr)));
+}
+
+function openIssues() {
+  const doneAt = {};
+  for (const r of recs) for (const i of r.items)
+    if (i.status === "done") doneAt[i.cat] = Math.max(doneAt[i.cat] || 0, r.km);
+  const by = {};
+  for (const r of recs) for (const i of r.items)
+    if (i.status === "quote" && !(doneAt[i.cat] > r.km)) (by[i.cat] ||= []).push({ r, i });
+  return Object.entries(by).map(([cat, list]) => ({ cat, list, latest: list.at(-1), first: list[0] }));
+}
+
+function renderOpen() {
+  const box = document.getElementById("open"); box.replaceChildren();
+  const issues = openIssues();
+  if (!issues.length) return box.append(h("div", { class: "empty" }, "沒有未處理項目"));
+  for (const { cat, list, latest, first } of issues) {
+    const since = list.length > 1 ? `，${first.r.date} 起已提報 ${list.length} 次` : "";
+    box.append(h("div", { class: "row" },
+      h("div", { class: "t" }, `${cat}：${latest.i.name}`,
+        h("div", { class: "s" }, `${latest.r.date} · ${fmt(latest.r.km)} 公里${since}`)),
+      h("button", { onclick: () => mutate(`${cat} 已標為施作`, () => { latest.i.status = "done"; }) }, "已施作"),
+      h("button", { class: "del", onclick: () => mutate(`已刪除 ${cat}`, () => {
+        for (const r of recs) r.items = r.items.filter(i => !(i.cat === cat && i.status === "quote"));
+      }) }, "刪除")));
+  }
+}
+
+function renderRecords() {
+  const box = document.getElementById("records"); box.replaceChildren();
+  for (const r of [...recs].reverse()) {
+    const hasDone = r.items.some(i => i.status === "done");
+    box.append(h("details", {},
+      h("summary", {},
+        h("span", { class: "t" }, `${fmt(r.km)} 公里`, h("span", { class: "s" }, `  ${r.date} · ${r.shop}`)),
+        h("span", { class: "s" }, money(r.total))),
+      h("div", { class: "body" },
+        r.items.map(i => h("div", { class: "item" },
+          h("span", { class: "badge " + i.status }, i.status === "done" ? "已施作" : "報價"),
+          h("span", { class: "n" }, i.name),
+          h("span", { class: "p" }, money(i.price)),
+          h("button", { class: "del", onclick: () => {
+            if (i.status === "done" && !confirm(`刪除已施作記錄「${i.name}」？`)) return;
+            mutate("已刪除一項", () => { r.items = r.items.filter(x => x !== i); });
+          } }, "刪"))),
+        h("div", { class: "item" }, h("span", { class: "n" }, ""),
+          h("button", { class: "del", onclick: () => {
+            if (hasDone && !confirm(`刪除整筆 ${fmt(r.km)} 公里的記錄？其中有已施作項目。`)) return;
+            mutate(`已刪除 ${fmt(r.km)} 公里的記錄`, () => { recs = recs.filter(x => x !== r); });
+          } }, "刪除整筆")))));
+  }
+}
+
+// ---- 拖入 ----
+const drop = document.getElementById("drop");
+["dragenter", "dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", async ev => {
+  const files = [...ev.dataTransfer.files];
+  const others = [];
+  for (const f of files) {
+    if (!/\.json$/i.test(f.name)) { others.push(f.name); continue; }
+    try { importJson(JSON.parse(await f.text())); } catch (e) { alert(`${f.name} 不是有效的記錄檔`); }
+  }
+  if (others.length) alert("圖片、PDF、Word 需要先交給 Claude 整理成記錄檔：\n" + others.join("\n"));
+});
+
+// 里程相同 → 同一筆：補上新項目；已有的報價若在新檔變成已施作，就更新狀態。
+function importJson(data) {
+  const list = Array.isArray(data) ? data : [data];
+  mutate(`已匯入 ${list.length} 筆`, () => {
+    for (const inc of list) {
+      const cur = recs.find(r => r.km === inc.km);
+      if (!cur) { recs.push(inc); continue; }
+      for (const i of inc.items) {
+        const same = cur.items.find(x => x.cat === i.cat && x.name === i.name);
+        if (!same) cur.items.push(i);
+        else if (same.status === "quote" && i.status === "done") same.status = "done";
+      }
+      cur.total = inc.total || cur.total;
+    }
+  });
+}
+
+render();
+</script>
+</body>
+</html>
