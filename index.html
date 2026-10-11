@@ -348,12 +348,12 @@ function placeNoKm(r) {
   });
 }
 
-// 單據時序（新到舊）：有里程的依里程排；沒有里程的放在日期不晚於它的最後一張有里程單之後。
+// 單據時序（新到舊）：有里程的依里程排；沒有里程的放在日期不晚於它的最後一張單之後。
 function timeline() {
   const all = ranked(), nk = recs.filter(r => r.noKm).sort((a, b) => a.date.localeCompare(b.date));
   for (const n of nk) {
     let at = 0;
-    all.forEach((r, i) => { if (hasKm(r) && r.date <= n.date) at = i + 1; });
+    all.forEach((r, i) => { if (r.date <= n.date) at = i + 1; });
     all.splice(at, 0, n);
   }
   return all.reverse();
