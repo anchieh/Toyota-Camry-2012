@@ -33,20 +33,20 @@ window.SEED = [
   },
   {
     // 2025-11-25：單上沒有里程，只能依日期放在 68,458 與 75,306 之間，不納入里程查核。
-    // 截圖被裁掉，各項單價看不到；合計取自檔名與表尾（41,400）。尚未確認是否施作，先標為報價。
-    id: "n20251125", noKm: true, date: "2025-11-25", shop: "", no: "", total: 41400,
+    // 截圖被裁掉，各項單價看不到；合計取自檔名與表尾（41,400）。已確認有施作（嘉灃汽車保養廠）。
+    id: "n20251125", noKm: true, date: "2025-11-25", shop: "嘉灃汽車保養廠", no: "", total: 41400, rev: 1,
     items: [
-      { cat: "避震器", name: "KYB 藍筒（避震器）", price: 0, status: "quote" },
-      { cat: "避震器", name: "前上座（原廠）", price: 0, status: "quote" },
-      { cat: "避震器", name: "前上座軸承（原廠）", price: 0, status: "quote" },
-      { cat: "避震器", name: "前彈簧盤", price: 0, status: "quote" },
-      { cat: "避震器", name: "前饅頭", price: 0, status: "quote" },
-      { cat: "避震器", name: "前上座防塵套", price: 0, status: "quote" },
-      { cat: "避震器", name: "前彈簧下墊圈", price: 0, status: "quote" },
-      { cat: "避震器", name: "後上座含防塵套（原廠）", price: 0, status: "quote" },
-      { cat: "避震器", name: "後饅頭", price: 0, status: "quote" },
-      { cat: "避震器", name: "後彈簧下墊圈", price: 0, status: "quote" },
-      { cat: "李仔串", name: "前後李仔串", price: 0, status: "quote" }
+      { cat: "避震器", name: "KYB 藍筒（避震器）", price: 0, status: "done" },
+      { cat: "避震器", name: "前上座（原廠）", price: 0, status: "done" },
+      { cat: "避震器", name: "前上座軸承（原廠）", price: 0, status: "done" },
+      { cat: "避震器", name: "前彈簧盤", price: 0, status: "done" },
+      { cat: "避震器", name: "前饅頭", price: 0, status: "done" },
+      { cat: "避震器", name: "前上座防塵套", price: 0, status: "done" },
+      { cat: "避震器", name: "前彈簧下墊圈", price: 0, status: "done" },
+      { cat: "避震器", name: "後上座含防塵套（原廠）", price: 0, status: "done" },
+      { cat: "避震器", name: "後饅頭", price: 0, status: "done" },
+      { cat: "避震器", name: "後彈簧下墊圈", price: 0, status: "done" },
+      { cat: "李仔串", name: "前後李仔串", price: 0, status: "done" }
     ]
   },
   {
