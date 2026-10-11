@@ -44,6 +44,9 @@ th.dragover { box-shadow: inset 2px 0 0 var(--fg); }
 tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.fill { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+input.km[type=date] { width: 150px; }
+#drop button { margin-left: 8px; }
+a.f { color: var(--fg); }
 input.km { width: 110px; font: inherit; font-size: 13px; padding: 3px 8px; margin-right: 6px;
   border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
 td .s, .s { color: var(--muted); font-size: 12px; }
@@ -84,21 +87,21 @@ footer a { color: inherit; cursor: pointer; text-decoration: underline; }
 <body>
 <div class="bar"><div><h1>Camry 保養記錄</h1><span class="next" id="next"></span></div></div>
 <main>
-  <div id="drop">把單據檔案拖到這裡</div>
+  <div id="drop">把單據拖到這裡，一個檔案就是一單 <button id="newBlank">＋ 空白一單</button></div>
 
   <section id="pendingSec" hidden>
-    <h2>待補里程（輸入里程後歸入記錄）</h2>
+    <h2>待確認（核對日期和里程，按確認歸入單據）</h2>
     <div class="tw" id="pending"></div>
   </section>
+
+  <h2>單據（每個里程一單，點一列展開）</h2>
+  <div class="tw" id="records"></div>
 
   <h2>項目</h2>
   <div class="tw" id="items"></div>
 
   <h2>未處理</h2>
   <div class="tw" id="open"></div>
-
-  <h2>記錄（每個里程一單，點一列展開）</h2>
-  <div class="tw" id="records"></div>
 
   <footer>里程相同即同一筆。刪除需要密碼，只為避免誤刪。<a id="reset">還原初始資料</a></footer>
 </main>
@@ -264,6 +267,30 @@ function renderItems() {
   ], rows, { empty: "還沒有施作記錄" });
 }
 
+// 原始檔存在這個瀏覽器的 IndexedDB，單上只記檔案 id。
+const idb = (() => {
+  let db;
+  const open = () => db || (db = new Promise((res, rej) => {
+    const q = indexedDB.open("camry-files", 1);
+    q.onupgradeneeded = () => q.result.createObjectStore("f");
+    q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+  }));
+  const tx = async (mode, fn) => { const d = await open(); return new Promise((res, rej) => {
+    const t = d.transaction("f", mode), r = fn(t.objectStore("f"));
+    t.oncomplete = () => res(r.result); t.onerror = () => rej(t.error); }); };
+  return { put: (k, v) => tx("readwrite", s => s.put(v, k)), get: k => tx("readonly", s => s.get(k)) };
+})();
+async function openFile(f) {
+  let blob; try { blob = await idb.get(f.id); } catch (e) {}
+  if (!blob) return alert("原始檔不在這個瀏覽器裡");
+  window.open(URL.createObjectURL(blob), "_blank");
+}
+// 檔名像 20251013_68458_..._NTD5896 時，先帶入日期、里程、金額，仍要你確認。
+function guess(name) {
+  const m = name.match(/^(\d{4})(\d{2})(\d{2})_(\d{4,6})(?!\d)/), t = name.match(/NTD(\d+)/i);
+  return { date: m ? `${m[1]}-${m[2]}-${m[3]}` : "", km: m ? m[4] : "", total: t ? Number(t[1]) : 0 };
+}
+
 const hasKm = r => Number.isFinite(r.km) && r.km > 0;
 const ranked = () => recs.filter(hasKm).sort((a, b) => a.km - b.km);
 
@@ -297,18 +324,17 @@ function renderPending() {
   const list = recs.filter(r => !hasKm(r));
   document.getElementById("pendingSec").hidden = !list.length;
   table("pending", [
-    { key: "date", label: "日期", cell: r => r.date || "—" },
-    { key: "shop", label: "廠名", cell: r => r.shop || "—" },
-    { key: "no", label: "單號", cell: r => r.no || "—" },
-    { key: "total", label: "金額", num: true, cell: r => money(r.total) || "—" },
-    { key: "names", label: "內容", fill: true, cell: r => r.items.map(i => i.name).join("、") },
-    { key: "ops", label: "", fixed: true, cell: r => {
-      const inp = h("input", { type: "number", inputmode: "numeric", placeholder: "輸入里程", class: "km" });
-      const ok = () => setKm(r, Number(inp.value));
-      inp.addEventListener("keydown", e => { if (e.key === "Enter") ok(); });
-      return [inp, h("button", { onclick: ok }, "確認"),
-        h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一筆單據", () => { recs = recs.filter(x => x !== r); })) }, "刪除")];
-    } }
+    { key: "what", label: "單據", fill: true, cell: r => r.file
+        ? [r.file.name + " ", h("a", { href: "#", class: "f", onclick: e => { e.preventDefault(); openFile(r.file); } }, "開啟")]
+        : (r.items.map(i => i.name).join("、") || "（空白單）") },
+    { key: "date", label: "日期", cell: r => h("input", { type: "date", class: "km", value: r.draftDate ?? r.date ?? "",
+        oninput: e => { r.draftDate = e.target.value; } }) },
+    { key: "km", label: "里程", num: true, cell: r => h("input", { type: "number", inputmode: "numeric", class: "km", placeholder: "公里",
+        value: r.draftKm ?? "", oninput: e => { r.draftKm = e.target.value; },
+        onkeydown: e => { if (e.key === "Enter") confirmDraft(r); } }) },
+    { key: "ops", label: "", fixed: true, cell: r => [
+      h("button", { onclick: () => confirmDraft(r) }, "確認"),
+      h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一張待確認的單", () => { recs = recs.filter(x => x !== r); })) }, "刪除")] }
   ], list);
 }
 
@@ -321,11 +347,14 @@ function mergeInto(cur, inc) {
   }
   cur.total = cur.total || inc.total; cur.date ||= inc.date; cur.shop ||= inc.shop; cur.no ||= inc.no;
 }
-function setKm(r, km) {
-  if (!Number.isInteger(km) || km <= 0) { alert("請輸入里程（正整數公里）"); return; }
+function confirmDraft(r) {
+  const date = r.draftDate ?? r.date ?? "", km = Number(r.draftKm);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return alert("請選日期");
+  if (!Number.isInteger(km) || km <= 0) return alert("請輸入里程（公里）");
   const cur = recs.find(x => x !== r && x.km === km);
-  mutate(cur ? `已併入 ${fmt(km)} 公里的記錄` : `已設定里程 ${fmt(km)} 公里`, () => {
-    if (cur) { mergeInto(cur, r); recs = recs.filter(x => x !== r); } else r.km = km;
+  mutate(cur ? `已併入 ${fmt(km)} 公里的單` : `已歸入 ${fmt(km)} 公里`, () => {
+    r.date = date; delete r.draftDate; delete r.draftKm;
+    if (cur) { cur.file ||= r.file; mergeInto(cur, r); recs = recs.filter(x => x !== r); } else r.km = km;
   });
 }
 
@@ -337,6 +366,7 @@ function renderRecords() {
     { key: "no", label: "單號", cell: r => r.no || "—" },
     { key: "total", label: "金額", num: true, cell: r => money(r.total) || "—" },
     { key: "n", label: "項目數", num: true, cell: r => r.items.length },
+    { key: "file", label: "原始檔", cell: r => r.file ? h("a", { href: "#", class: "f", onclick: e => { e.preventDefault(); e.stopPropagation(); openFile(r.file); } }, r.file.name) : "—" },
     { key: "ops", label: "", fixed: true, cell: r => h("button", { class: "del", onclick: e => {
       e.stopPropagation();
       guard(() => mutate(`已刪除 ${fmt(r.km)} 公里的記錄`, () => { recs = recs.filter(x => x !== r); }));
@@ -356,13 +386,23 @@ const drop = document.getElementById("drop");
 ["dragenter", "dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", async ev => {
-  const others = [];
+  const drafts = [];
   for (const f of [...ev.dataTransfer.files]) {
-    if (!/\.json$/i.test(f.name)) { others.push(f.name); continue; }
-    try { importJson(JSON.parse(await f.text())); } catch (e) { alert(`${f.name} 不是有效的記錄檔`); }
+    if (/\.json$/i.test(f.name)) {
+      try { importJson(JSON.parse(await f.text())); } catch (e) { alert(`${f.name} 不是有效的記錄檔`); }
+      continue;
+    }
+    const id = (crypto.randomUUID && crypto.randomUUID()) || Date.now() + "-" + Math.random().toString(36).slice(2);
+    try { await idb.put(id, f); } catch (e) {}
+    const g = guess(f.name);
+    drafts.push({ km: null, date: null, shop: "", no: "", total: g.total, items: [],
+      file: { id, name: f.name, type: f.type }, draftDate: g.date, draftKm: g.km });
   }
-  if (others.length) alert("圖片、PDF、Word 需要先交給 Claude 整理成記錄檔：\n" + others.join("\n"));
+  if (drafts.length) mutate(`已加入 ${drafts.length} 張待確認的單`, () => { recs.push(...drafts); });
 });
+document.getElementById("newBlank").onclick = () => {
+  recs.push({ km: null, date: null, shop: "", no: "", total: 0, items: [] }); save(); render();
+};
 
 function importJson(data) {
   const list = Array.isArray(data) ? data : [data];
