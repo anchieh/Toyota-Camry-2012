@@ -344,10 +344,10 @@ function suggestRows(np) {
   for (const f of window.PLAN.refs || []) {
     const r = doneBy[f.cat]; if (!r) continue;
     const k = estKm(r), dueKm = f.km && k != null ? k + f.km : null, dueDate = f.months ? addMonths(r.date, f.months) : null;
-    const doIt = (dueKm != null && dueKm <= np.hi) || (dueDate && np.dHi && dueDate <= np.dHi);
+    const doIt = !f.inspect && ((dueKm != null && dueKm <= np.hi) || (dueDate && np.dHi && dueDate <= np.dHi));
     rows.push({ name: f.cat, last: `${r.date} · ${hasKm(r) ? fmt(r.km) : "約 " + fmt(k)}`,
       cycle: [f.km && `${fmt(f.km)} 公里`, f.months && `${f.months} 個月`].filter(Boolean).join(" 或 "),
-      due: [dueKm != null && `約 ${fmt(dueKm)} 公里`, dueDate && iso(dueDate)].filter(Boolean).join(" ／ "), doIt });
+      due: [dueKm != null && `約 ${fmt(dueKm)} 公里`, dueDate && iso(dueDate)].filter(Boolean).join(" ／ "), doIt, inspect: f.inspect });
   }
   return rows;
 }
@@ -361,7 +361,7 @@ function lastDoneText(cat) {
 function openQuotes() {
   const out = {};
   for (const r of recs) for (const i of r.items) {
-    if (i.status !== "quote") continue;
+    if (i.status !== "quote" || i.closed) continue;
     const resolved = recs.some(x => x.date > r.date && x.items.some(y => y.status === "done" && y.cat === i.cat));
     if (!resolved) out[i.cat] = `${i.name}（${r.date}）`;
   }
@@ -387,10 +387,10 @@ function renderSuggest() {
     { key: "last", label: "上次", cell: x => x.last },
     { key: "cycle", label: "參考週期", cell: x => x.cycle },
     { key: "due", label: "預計到期", cell: x => x.due },
-    { key: "do", label: "下次", cell: x => h("span", { class: "res " + (x.doIt ? "part" : "next") }, x.doIt ? "建議做" : "還沒到") }
+    { key: "do", label: "下次", cell: x => h("span", { class: "res " + (x.doIt ? "part" : "next") }, x.doIt ? "建議做" : x.inspect ? "每次檢查" : "還沒到") }
   ], suggestRows(np));
   const oq = openQuotes();
-  document.getElementById("nextOpen").textContent = oq.length ? `單上提報、還沒處理：${oq.join("、")}。` : "";
+  document.getElementById("nextOpen").textContent = oq.length ? `單上提報、還沒處理：${oq.join("、")}。` : "單上提報的項目都已處理或結案。";
 }
 
 function renderPending() {
@@ -518,7 +518,7 @@ function renderRecords() {
     { key: "date", label: "日期", cell: r => r.date },
     { key: "shop", label: "廠名", cell: r => r.shop },
     { key: "no", label: "單號", cell: r => r.no || "—" },
-    { key: "total", label: "金額", num: true, cell: r => money(r.total) || "—" },
+    { key: "total", label: "金額", num: true, cell: r => r.total ? (r.est ? "約 " : "") + money(r.total) + (r.est ? "（估）" : "") : "—" },
     { key: "n", label: "項目數", num: true, cell: r => r.items.length },
     { key: "file", label: "原始檔", cell: r => r.file ? h("a", { href: "#", class: "f", onclick: e => { e.preventDefault(); e.stopPropagation(); openFile(r.file); } }, r.file.name) : "—" },
     { key: "ops", label: "", fixed: true, cell: r => h("button", { class: "del", onclick: e => {
@@ -529,9 +529,9 @@ function renderRecords() {
     detail: r => [h("div", { class: "item" }, h("span", { class: "n s" }, r.items.length ? "明細" : "尚無明細"),
       h("button", { class: "del", onclick: () => deleteRecord(r) }, "刪除這一單")),
     ...r.items.map(i => h("div", { class: "item" },
-      h("span", { class: "badge " + i.status }, i.status === "done" ? "已施作" : "報價"),
-      h("span", { class: "n" }, i.name),
-      h("span", { class: "p" }, money(i.price)),
+      h("span", { class: "badge " + i.status }, i.status === "done" ? "已施作" : i.closed ? "已結案" : "報價"),
+      h("span", { class: "n" }, i.name + (i.closed ? `（${i.closed}）` : "")),
+      h("span", { class: "p" }, (r.est && i.price ? "約 " : "") + money(i.price)),
       h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一項", () => { r.items = r.items.filter(x => x !== i); })) }, "刪")))]
   });
 }

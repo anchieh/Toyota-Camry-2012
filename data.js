@@ -1,6 +1,6 @@
 // 記錄以「里程」為唯一鍵，里程相同即同一筆。
 // rev：這一單在 data.js 修正過就加一，已存資料的瀏覽器會改用新版（保留原始檔連結）。
-// item.status: "done" 已施作 / "quote" 報價或檢查異常（未施作）
+// item.status: "done" 已施作 / "quote" 報價或檢查異常（未施作）；quote 加 closed 代表已結案（已另行處理或決定不處理）
 // item.cat: 項目分類，清單以此歸戶。
 
 window.SEED = [
@@ -15,7 +15,7 @@ window.SEED = [
     ]
   },
   {
-    km: 68458, date: "2025-10-13", shop: "耐途耐", no: "1141013008", total: 5896,
+    km: 68458, date: "2025-10-13", shop: "耐途耐", no: "1141013008", total: 5896, rev: 1,
     items: [
       { cat: "機油", name: "5000 公里定期保養（機油、機油芯）", price: 1999, status: "done" },
       { cat: "節氣門", name: "電子節氣門清潔校正", price: 699, status: "done" },
@@ -23,12 +23,12 @@ window.SEED = [
       { cat: "煞車油", name: "德國福士煞車油循環", price: 1499, status: "done" },
       { cat: "空氣芯", name: "空氣芯", price: 300, status: "done" },
       { cat: "冷氣濾網", name: "冷氣濾網", price: 500, status: "done" },
-      { cat: "變速箱漏油", name: "變速箱底殼漏油", price: 0, status: "quote" },
+      { cat: "變速箱漏油", name: "變速箱底殼漏油", price: 0, status: "quote", closed: "你確認已處理" },
       { cat: "李仔串", name: "左右前李仔串異常損壞", price: 0, status: "quote" },
-      { cat: "防傾桿橡皮", name: "左右前防傾桿橡皮磨耗", price: 0, status: "quote" },
+      { cat: "防傾桿橡皮", name: "左右前防傾桿橡皮磨耗", price: 0, status: "quote", closed: "你確認已處理" },
       { cat: "避震器", name: "左右後避震器漏油損壞", price: 0, status: "quote" },
       { cat: "傳動軸油封", name: "傳動軸油封漏油", price: 0, status: "quote" },
-      { cat: "輪胎", name: "四輪胎壓不足", price: 0, status: "quote" }
+      { cat: "輪胎", name: "四輪胎壓不足", price: 0, status: "quote", closed: "你確認已處理" }
     ]
   },
   {
@@ -59,7 +59,7 @@ window.SEED = [
     ]
   },
   {
-    km: 75306, date: "2026-02-03", shop: "耐途耐", no: "1150203001", total: 5748, rev: 1,
+    km: 75306, date: "2026-02-03", shop: "耐途耐", no: "1150203001", total: 5748, rev: 2,
     items: [
       { cat: "機油", name: "5000 公里定期保養（ROOPROW 5W-50 ×4、機油芯）", price: 1999, status: "done" },
       { cat: "引擎積碳", name: "燃燒室積碳清洗", price: 999, status: "done" },
@@ -69,10 +69,10 @@ window.SEED = [
       { cat: "輪胎", name: "補胎", price: 0, status: "done" },
       { cat: "冷氣濾網", name: "冷氣濾網過髒", price: 0, status: "quote" },
       { cat: "冷氣風箱", name: "冷氣風箱過髒", price: 0, status: "quote" },
-      { cat: "雨刷水", name: "前雨刷水量不足", price: 0, status: "quote" },
+      { cat: "雨刷水", name: "前雨刷水量不足", price: 0, status: "quote", closed: "你確認已處理" },
       { cat: "節氣門", name: "電子節氣門積碳", price: 0, status: "quote" },
-      { cat: "火星塞", name: "火星塞間隙過大", price: 0, status: "quote" },
-      { cat: "輪胎", name: "四輪胎壓不足、右前輪胎異常", price: 0, status: "quote" }
+      { cat: "火星塞", name: "火星塞間隙過大", price: 0, status: "quote", closed: "不預防更換，每次保養檢查即可" },
+      { cat: "輪胎", name: "四輪胎壓不足、右前輪胎異常", price: 0, status: "quote", closed: "你確認已處理" }
     ]
   },
   {
@@ -88,10 +88,10 @@ window.SEED = [
     ]
   },
   {
-    // 2026-09-05：只有一行記事，沒有里程與金額，依日期放在 81,724 與 90,202 之間。
-    id: "n20260905", noKm: true, date: "2026-09-05", shop: "濠國汽車材料百貨", no: "", total: 0,
+    // 2026-09-05：只有一行記事，沒有里程；金額你忘了，2,500 是依一般行情估的（est），有正確金額再改。
+    id: "n20260905", noKm: true, date: "2026-09-05", shop: "濠國汽車材料百貨", no: "", total: 2500, est: true, rev: 1,
     items: [
-      { cat: "大燈", name: "大燈 HID 安定器（單邊）", price: 0, status: "done" }
+      { cat: "大燈", name: "大燈 HID 安定器（單邊）", price: 2500, status: "done" }
     ]
   },
   {
@@ -133,7 +133,7 @@ window.PLAN = {
     { cat: "冷氣風箱", km: 30000, months: 24 },
     { cat: "煞車油", km: 40000, months: 24 },
     { cat: "變速箱油", km: 40000 },
-    { cat: "火星塞", km: 100000 },
+    { cat: "火星塞", km: 100000, inspect: true },
     { cat: "皮帶", km: 60000 },
     { cat: "電瓶", months: 30 },
     { cat: "雨刷", months: 12 }
@@ -142,6 +142,7 @@ window.PLAN = {
     "每 5,000 公里一個查核點，前後 2,500 公里內有保養就算到位；整個範圍沒有單，但前後兩張施作單相隔不超過 10,000 公里，視為合理跳過，超過才算缺。",
     "每個查核點的基本款是機油與機油芯；其他項目不設固定週期，看單上檢查表的結果，再對照拆下零件的實物決定。",
     "漏油、避震、懸吊、輪胎這類安全項目，排在濾網、清洗這類項目之前處理。",
+    "火星塞不預防性更換，每次保養時檢查間隙即可。",
     "暫定開到 200,000 公里報廢；最後 20,000 公里只做安全與必要項目，不再投入大修。"
   ]
 };
