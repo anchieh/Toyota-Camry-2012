@@ -73,6 +73,9 @@ dl.kv dd { margin: 0 12px 0 0; font-size: 14px; }
 @media (max-width: 860px) { dl.kv { grid-template-columns: repeat(2, max-content minmax(0, 1fr)); } }
 @media (max-width: 520px) { dl.kv { grid-template-columns: max-content minmax(0, 1fr); } }
 dl.kv dd.todo { color: var(--muted); }
+#nextKv { grid-template-columns: repeat(2, max-content minmax(0, 1fr)); }
+#nextKv dd { white-space: nowrap; }
+@media (max-width: 560px) { #nextKv { grid-template-columns: max-content minmax(0, 1fr); } }
 ol.plan { margin: 0; padding: 10px 12px 10px 32px; background: var(--card); font-size: 14px;
   border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 ol.plan li + li { margin-top: 4px; }
@@ -97,6 +100,13 @@ footer a { color: inherit; cursor: pointer; text-decoration: underline; }
 <body>
 <div class="bar"><div><h1>Camry 保養記錄</h1><span class="next" id="next"></span></div></div>
 <main>
+  <section id="nextSec">
+    <h2>下次建議</h2>
+    <dl class="kv" id="nextKv"></dl>
+    <div class="tw" id="nextTable"></div>
+    <p class="sum" id="nextOpen"></p>
+  </section>
+
   <div id="drop">把單據拖到這裡，一個檔案就是一單 <button id="newBlank">＋ 空白一單</button></div>
 
   <section id="pendingSec" hidden>
@@ -259,15 +269,12 @@ function table(id, cols, rows, o = {}) {
 // ---- 顯示 ----
 function render() {
   recs.sort((a, b) => (a.km || 1e12) - (b.km || 1e12));
-  renderNext(); renderPending(); renderRecords(); renderCar(); renderPlan();
+  renderNext(); renderSuggest(); renderPending(); renderRecords(); renderCar(); renderPlan();
 }
 
 function renderNext() {
-  const last = ranked().reverse().find(r => r.items.some(i => i.status === "done"));
-  const el = document.getElementById("next");
-  if (!last) { el.textContent = ""; return; }
-  const d = new Date(last.date); d.setMonth(d.getMonth() + 6);
-  el.textContent = `下次保養約 ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}（上次 ${last.date} · ${fmt(last.km)} 公里）`;
+  const np = nextPlan(), el = document.getElementById("next");
+  el.textContent = np && np.dMid ? `下次建議 ${iso(np.dMid).slice(0, 7)}（約 ${fmt(np.point)} 公里）` : "";
 }
 
 // 原始檔存在這個瀏覽器的 IndexedDB，單上只記檔案 id。
@@ -297,6 +304,94 @@ function guess(name) {
 
 const hasKm = r => Number.isFinite(r.km) && r.km > 0;
 const ranked = () => recs.filter(hasKm).sort((a, b) => a.km - b.km);
+
+const iso = d => d.toISOString().slice(0, 10);
+const addMonths = (s, n) => { const d = new Date(s); d.setMonth(d.getMonth() + n); return d; };
+const addDays = (s, n) => new Date(new Date(s).getTime() + n * 864e5);
+
+// 沒有里程的單，用前後兩張有里程的單依日期內插，估出當時的大約里程。
+function estKm(r) {
+  if (hasKm(r)) return r.km;
+  const rs = ranked(); let prev = null, next = null;
+  for (const x of rs) { if (x.date <= r.date) prev = x; else if (!next) next = x; }
+  if (prev && next) {
+    const t = d => new Date(d).getTime();
+    return Math.round(prev.km + (next.km - prev.km) * (t(r.date) - t(prev.date)) / (t(next.date) - t(prev.date)));
+  }
+  return (prev || next) ? (prev || next).km : null;
+}
+// 你的節奏：第一張到最近一張有里程的單，平均每天開幾公里。
+function pace() {
+  const rs = ranked(); if (rs.length < 2) return null;
+  const days = (new Date(rs.at(-1).date) - new Date(rs[0].date)) / 864e5;
+  return days > 0 ? (rs.at(-1).km - rs[0].km) / days : null;
+}
+// 下一個查核點，以及依你的節奏推估會在什麼時候到。
+function nextPlan() {
+  const P = window.PLAN, rs = ranked(); if (!rs.length) return null;
+  const last = rs.at(-1), v = pace(), point = Math.round(last.km / P.step) * P.step + P.step;
+  const lo = point - P.tol, hi = point + P.tol - 1;
+  const at = km => v ? addDays(last.date, (km - last.km) / v) : null;
+  return { last, v, point, lo, hi, dLo: at(lo), dMid: at(point), dHi: at(hi) };
+}
+
+function suggestRows(np) {
+  const rows = [{ name: "機油＋機油芯（基本款）", last: lastDoneText("機油"), cycle: `每 ${fmt(window.PLAN.step)} 公里`,
+    due: `${fmt(np.point)}（${fmt(np.lo)} – ${fmt(np.hi)}）`, doIt: true }];
+  const doneBy = {};
+  for (const r of recs) for (const i of r.items)
+    if (i.status === "done" && i.cat && (!doneBy[i.cat] || r.date > doneBy[i.cat].date)) doneBy[i.cat] = r;
+  for (const f of window.PLAN.refs || []) {
+    const r = doneBy[f.cat]; if (!r) continue;
+    const k = estKm(r), dueKm = f.km && k != null ? k + f.km : null, dueDate = f.months ? addMonths(r.date, f.months) : null;
+    const doIt = (dueKm != null && dueKm <= np.hi) || (dueDate && np.dHi && dueDate <= np.dHi);
+    rows.push({ name: f.cat, last: `${r.date} · ${hasKm(r) ? fmt(r.km) : "約 " + fmt(k)}`,
+      cycle: [f.km && `${fmt(f.km)} 公里`, f.months && `${f.months} 個月`].filter(Boolean).join(" 或 "),
+      due: [dueKm != null && `約 ${fmt(dueKm)} 公里`, dueDate && iso(dueDate)].filter(Boolean).join(" ／ "), doIt });
+  }
+  return rows;
+}
+function lastDoneText(cat) {
+  let best = null;
+  for (const r of recs) if (r.items.some(i => i.status === "done" && i.cat === cat) && (!best || r.date > best.date)) best = r;
+  return best ? `${best.date} · ${hasKm(best) ? fmt(best.km) : "約 " + fmt(estKm(best))}` : "—";
+}
+
+// 單上提報過、之後沒有同類施作的項目。
+function openQuotes() {
+  const out = {};
+  for (const r of recs) for (const i of r.items) {
+    if (i.status !== "quote") continue;
+    const resolved = recs.some(x => x.date > r.date && x.items.some(y => y.status === "done" && y.cat === i.cat));
+    if (!resolved) out[i.cat] = `${i.name}（${r.date}）`;
+  }
+  return Object.values(out);
+}
+
+function renderSuggest() {
+  const np = nextPlan(), kv = document.getElementById("nextKv"); kv.replaceChildren();
+  if (!np) { document.getElementById("nextSec").hidden = true; return; }
+  document.getElementById("nextSec").hidden = false;
+  const today = new Date(), days = np.dMid ? Math.round((np.dMid - today) / 864e5) : null;
+  const when = !np.dMid ? null : `${iso(np.dMid)}（${iso(np.dLo)} – ${iso(np.dHi)}）`;
+  const nowKm = np.v ? Math.round(np.last.km + np.v * (today - new Date(np.last.date)) / 864e5) : null;
+  const rows = [
+    ["建議時間", when], ["建議里程", `${fmt(np.point)}（${fmt(np.lo)} – ${fmt(np.hi)}）`],
+    ["距建議時間", days == null ? null : days >= 0 ? `約 ${days} 天` : `已超過 ${-days} 天`],
+    ["預估目前里程", nowKm ? `約 ${fmt(nowKm)}（依你的節奏推估）` : null],
+    ["你的節奏", np.v ? `每天約 ${Math.round(np.v)} 公里，每月約 ${fmt(Math.round(np.v * 30.4))}` : null],
+    ["半年上限", iso(addMonths(np.last.date, 6))]];
+  for (const [k, v] of rows) kv.append(h("dt", {}, k), h("dd", { class: v ? "" : "todo" }, v || "—"));
+  table("nextTable", [
+    { key: "name", label: "項目", cell: x => x.name },
+    { key: "last", label: "上次", cell: x => x.last },
+    { key: "cycle", label: "參考週期", cell: x => x.cycle },
+    { key: "due", label: "預計到期", cell: x => x.due },
+    { key: "do", label: "下次", cell: x => h("span", { class: "res " + (x.doIt ? "part" : "next") }, x.doIt ? "建議做" : "還沒到") }
+  ], suggestRows(np));
+  const oq = openQuotes();
+  document.getElementById("nextOpen").textContent = oq.length ? `單上提報、還沒處理：${oq.join("、")}。` : "";
+}
 
 function renderPending() {
   const list = recs.filter(r => !hasKm(r) && !r.noKm);
