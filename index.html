@@ -270,7 +270,8 @@ function renderPending() {
         ? [r.file.name + " ", h("a", { href: "#", class: "f", onclick: e => { e.preventDefault(); openFile(r.file); } }, "開啟")]
         : (r.items.map(i => i.name).join("、") || "（空白單）") },
     { key: "date", label: "日期", cell: r => h("input", { type: "date", class: "km", value: r.draftDate ?? r.date ?? "",
-        oninput: e => { r.draftDate = e.target.value; } }) },
+        oninput: e => { r.draftDate = e.target.value; },
+        onclick: e => { try { e.target.showPicker(); } catch (x) {} } }) },
     { key: "km", label: "里程", num: true, cell: r => h("input", { type: "number", inputmode: "numeric", class: "km", placeholder: "公里",
         value: r.draftKm ?? "", oninput: e => { r.draftKm = e.target.value; },
         onkeydown: e => { if (e.key === "Enter") confirmDraft(r); } }) },
