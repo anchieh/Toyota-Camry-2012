@@ -77,7 +77,7 @@ ol.plan { margin: 0; padding: 10px 12px 10px 32px; background: var(--card); font
   border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 ol.plan li + li { margin-top: 4px; }
 p.sum { margin: 12px 0 8px; font-size: 14px; }
-.res.ok { color: var(--ok); } .res.part { color: var(--warn); } .res.miss { color: var(--accent); } .res.next { color: var(--muted); }
+.res.ok { color: var(--ok); } .res.part { color: var(--warn); } .res.miss { color: var(--accent); } .res.next, .res.skip { color: var(--muted); }
 #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg);
   color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: 14px; display: none;
   gap: 12px; align-items: center; max-width: calc(100% - 32px); z-index: 40; }
@@ -379,14 +379,21 @@ function renderCar() {
 // 查核點：每 step 公里一個，範圍是 [點−tol, 點+tol)，因此每張單剛好落在一個查核點。
 // 從有記錄的第一個查核點起，查到最近一單所在的查核點，再多列下一個。
 function checkPoints() {
-  const { step, tol } = window.PLAN, rs = ranked();
+  const { step, tol } = window.PLAN, maxGap = window.PLAN.maxGap || 2 * step, rs = ranked();
+  const served = rs.filter(r => r.items.some(i => i.status === "done"));
   if (!rs.length) return [];
   const first = Math.round(rs[0].km / step) * step, last = Math.round(rs.at(-1).km / step) * step;
   const out = [];
   for (let m = first; m <= last + step; m += step) {
     const inWin = rs.filter(r => r.km >= m - tol && r.km < m + tol);
-    const state = m > last ? "next" : inWin.some(r => r.items.some(i => i.status === "done")) ? "ok" : inWin.length ? "part" : "miss";
-    out.push({ m, lo: m - tol, hi: m + tol - 1, inWin, state });
+    let state = m > last ? "next" : inWin.some(r => r.items.some(i => i.status === "done")) ? "ok" : inWin.length ? "part" : "miss";
+    // 整個範圍沒有單：前後兩張施作單相隔不超過 maxGap（只跳過一個點）就視為合理跳過。
+    let span = null;
+    if (state === "miss") {
+      const prev = served.filter(r => r.km < m - tol).at(-1), next = served.find(r => r.km >= m + tol);
+      if (prev && next && next.km - prev.km <= maxGap) { state = "skip"; span = { prev, next, gap: next.km - prev.km }; }
+    }
+    out.push({ m, lo: m - tol, hi: m + tol - 1, inWin, state, span });
   }
   return out.reverse();
 }
@@ -398,14 +405,15 @@ function renderPlan() {
   const noKm = recs.filter(r => r.noKm).length;
   const left = last ? Math.max(0, Math.round((P.scrapKm - last.km) / P.step)) : 0;
   document.getElementById("planSum").textContent = pts.length
-    ? `已查核 ${n("ok") + n("part") + n("miss")} 個點：已保養 ${n("ok")}、僅有單 ${n("part")}、缺 ${n("miss")}。距暫定報廢還有約 ${left} 個查核點。${noKm ? `另有 ${noKm} 張沒有里程的單，不納入查核。` : ""}` : "";
-  const label = { ok: "✓ 已保養", part: "△ 僅有單", miss: "✗ 缺", next: "… 下次" };
+    ? `已查核 ${n("ok") + n("part") + n("skip") + n("miss")} 個點：已保養 ${n("ok")}、僅有單 ${n("part")}、合理跳過 ${n("skip")}、缺 ${n("miss")}。距暫定報廢還有約 ${left} 個查核點。${noKm ? `另有 ${noKm} 張沒有里程的單，不納入查核。` : ""}` : "";
+  const label = { ok: "✓ 已保養", part: "△ 僅有單", skip: "○ 合理跳過", miss: "✗ 缺", next: "… 下次" };
   table("check", [
     { key: "m", label: "查核點", num: true, cell: x => fmt(x.m) },
     { key: "range", label: "範圍", cell: x => `${fmt(x.lo)} – ${fmt(x.hi)}` },
     { key: "res", label: "結果", cell: x => h("span", { class: "res " + x.state }, label[x.state]) },
     { key: "recs", label: "對應單據", fill: true, cell: x => x.inWin.length
-        ? x.inWin.map(r => `${fmt(r.km)}（${r.km >= x.m ? "+" : "−"}${fmt(Math.abs(r.km - x.m))}，${r.date}）`).join("　") : "—" }
+        ? x.inWin.map(r => `${fmt(r.km)}（${r.km >= x.m ? "+" : "−"}${fmt(Math.abs(r.km - x.m))}，${r.date}）`).join("　")
+        : x.span ? `前後單相隔 ${fmt(x.span.gap)}（${fmt(x.span.prev.km)} → ${fmt(x.span.next.km)}）` : "—" }
   ], pts, { empty: "還沒有單據可查核" });
 }
 
