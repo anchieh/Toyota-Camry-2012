@@ -76,7 +76,7 @@ window.CAR = {
   cylinders: "四缸（單上換火星塞 4 顆）",
   seats: "5 人座，黑色",
   plug: "SK16HR11 銥合金",
-  oil: "ROOPROW 5W-50 全合成，約 4 公升＋機油芯（依單據）"
+  oil: "ROOPROW 5W-50 全合成，約 4 公升"
 };
 
 // 保養策略。step／tol：每 step 公里一個查核點，前後 tol 公里內有保養就算到位。
