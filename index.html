@@ -101,7 +101,7 @@ footer a { color: inherit; cursor: pointer; text-decoration: underline; }
 
 <script src="data.js"></script>
 <script>
-const KEY = "camry-records-v1", COLS_KEY = "camry-cols-v1";
+const KEY = "camry-records-v1", COLS_KEY = "camry-cols-v1", SEEN_KEY = "camry-seed-seen-v1";
 // 防誤刪用的簡易密碼（只存雜湊；公開頁面本來就不是安全機制）
 const PW_HASH = 3255812791629365;
 
@@ -110,7 +110,18 @@ let orders = (() => { try { return JSON.parse(localStorage.getItem(COLS_KEY)) ||
 const expanded = new Set();
 
 function load() {
-  try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {}
+  try {
+    const s = localStorage.getItem(KEY);
+    if (s) {
+      const stored = JSON.parse(s);
+      // data.js 之後新增的單要補進來；你已刪除的舊單不會復活。
+      const seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[61262,68458,75306,81724]"));
+      for (const r of window.SEED) if (!seen.has(r.km) && !stored.some(x => x.km === r.km)) stored.push(structuredClone(r));
+      localStorage.setItem(SEEN_KEY, JSON.stringify(window.SEED.map(r => r.km)));
+      localStorage.setItem(KEY, JSON.stringify(stored));
+      return stored;
+    }
+  } catch (e) {}
   return structuredClone(window.SEED);
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(recs)); } catch (e) {} }

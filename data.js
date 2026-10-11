@@ -56,5 +56,12 @@ window.SEED = [
       { cat: "電瓶", name: "電瓶", price: 3300, status: "done" },
       { cat: "燈泡", name: "小燈燈炮", price: 0, status: "done" }
     ]
+  },
+  {
+    km: 90202, date: "2026-10-07", shop: "耐途耐", no: "1151007013", total: 2699,
+    items: [
+      { cat: "機油", name: "5000 公里定期保養（ROOPROW 5W-50 ×4、機油芯）", price: 1999, status: "done" },
+      { cat: "雨刷", name: "雨刷片一組（矽膠）", price: 700, status: "done" }
+    ]
   }
 ];
