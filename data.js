@@ -15,7 +15,7 @@ window.SEED = [
     ]
   },
   {
-    km: 68458, date: "2025-10-13", shop: "耐途耐", no: "1141013008", total: 5896, rev: 1,
+    km: 68458, date: "2025-10-13", shop: "耐途耐", no: "1141013008", total: 5896, rev: 2,
     items: [
       { cat: "機油", name: "5000 公里定期保養（機油、機油芯）", price: 1999, status: "done" },
       { cat: "節氣門", name: "電子節氣門清潔校正", price: 699, status: "done" },
@@ -23,12 +23,12 @@ window.SEED = [
       { cat: "煞車油", name: "德國福士煞車油循環", price: 1499, status: "done" },
       { cat: "空氣芯", name: "空氣芯", price: 300, status: "done" },
       { cat: "冷氣濾網", name: "冷氣濾網", price: 500, status: "done" },
-      { cat: "變速箱漏油", name: "變速箱底殼漏油", price: 0, status: "quote", closed: "你確認已處理" },
+      { cat: "變速箱漏油", name: "變速箱底殼漏油", price: 0, status: "quote", closed: "2025-10-15、2025-11-25 兩單已處理" },
       { cat: "李仔串", name: "左右前李仔串異常損壞", price: 0, status: "quote" },
-      { cat: "防傾桿橡皮", name: "左右前防傾桿橡皮磨耗", price: 0, status: "quote", closed: "你確認已處理" },
+      { cat: "防傾桿橡皮", name: "左右前防傾桿橡皮磨耗", price: 0, status: "quote", closed: "2025-10-15、2025-11-25 兩單已處理" },
       { cat: "避震器", name: "左右後避震器漏油損壞", price: 0, status: "quote" },
       { cat: "傳動軸油封", name: "傳動軸油封漏油", price: 0, status: "quote" },
-      { cat: "輪胎", name: "四輪胎壓不足", price: 0, status: "quote", closed: "你確認已處理" }
+      { cat: "輪胎", name: "四輪胎壓不足", price: 0, status: "quote", closed: "2025-10-15、2025-11-25 兩單已處理" }
     ]
   },
   {
@@ -59,7 +59,7 @@ window.SEED = [
     ]
   },
   {
-    km: 75306, date: "2026-02-03", shop: "耐途耐", no: "1150203001", total: 5748, rev: 2,
+    km: 75306, date: "2026-02-03", shop: "耐途耐", no: "1150203001", total: 5748, rev: 3,
     items: [
       { cat: "機油", name: "5000 公里定期保養（ROOPROW 5W-50 ×4、機油芯）", price: 1999, status: "done" },
       { cat: "引擎積碳", name: "燃燒室積碳清洗", price: 999, status: "done" },
@@ -88,8 +88,8 @@ window.SEED = [
     ]
   },
   {
-    // 2026-09-05：只有一行記事，沒有里程；金額你忘了，2,500 是依一般行情估的（est），有正確金額再改。
-    id: "n20260905", noKm: true, date: "2026-09-05", shop: "濠國汽車材料百貨", no: "", total: 2500, est: true, rev: 1,
+    // 2026-09-05：只有一行記事，沒有里程；金額 2,500（你確認）。
+    id: "n20260905", noKm: true, date: "2026-09-05", shop: "濠國汽車材料百貨", no: "", total: 2500, rev: 2,
     items: [
       { cat: "大燈", name: "大燈 HID 安定器（單邊）", price: 2500, status: "done" }
     ]
