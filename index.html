@@ -125,6 +125,7 @@ const KEY = "camry-records-v1", COLS_KEY = "camry-cols-v1", SEEN_KEY = "camry-se
 // 防誤刪用的簡易密碼（只存雜湊；公開頁面本來就不是安全機制）
 const PW_HASH = 3255812791629365;
 
+const rid = r => r.km ?? r.id;
 let recs = load();
 let orders = (() => { try { return JSON.parse(localStorage.getItem(COLS_KEY)) || {}; } catch (e) { return {}; } })();
 const expanded = new Set();
@@ -136,12 +137,12 @@ function load() {
       const stored = JSON.parse(s);
       // data.js 之後新增的單要補進來；你已刪除的舊單不會復活。
       const seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[61262,68458,75306,81724]"));
-      for (const r of window.SEED) if (!seen.has(r.km) && !stored.some(x => x.km === r.km)) stored.push(structuredClone(r));
+      for (const r of window.SEED) if (!seen.has(rid(r)) && !stored.some(x => rid(x) === rid(r))) stored.push(structuredClone(r));
       for (const r of window.SEED) {
-        const i = stored.findIndex(x => x.km === r.km);
+        const i = stored.findIndex(x => rid(x) === rid(r));
         if (r.rev && i >= 0 && (stored[i].rev || 0) < r.rev) stored[i] = { ...structuredClone(r), file: stored[i].file };
       }
-      localStorage.setItem(SEEN_KEY, JSON.stringify(window.SEED.map(r => r.km)));
+      localStorage.setItem(SEEN_KEY, JSON.stringify(window.SEED.map(rid)));
       localStorage.setItem(KEY, JSON.stringify(stored));
       return stored;
     }
@@ -298,7 +299,7 @@ const hasKm = r => Number.isFinite(r.km) && r.km > 0;
 const ranked = () => recs.filter(hasKm).sort((a, b) => a.km - b.km);
 
 function renderPending() {
-  const list = recs.filter(r => !hasKm(r));
+  const list = recs.filter(r => !hasKm(r) && !r.noKm);
   document.getElementById("pendingSec").hidden = !list.length;
   table("pending", [
     { key: "what", label: "單據", fill: true, cell: r => r.file
@@ -312,6 +313,7 @@ function renderPending() {
         onkeydown: e => { if (e.key === "Enter") confirmDraft(r); } }) },
     { key: "ops", label: "", fixed: true, cell: r => [
       h("button", { onclick: () => confirmDraft(r) }, "確認"),
+      h("button", { title: "單上沒有里程：只填日期，依日期放進時序", onclick: () => placeNoKm(r) }, "無里程"),
       h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一張待確認的單", () => { recs = recs.filter(x => x !== r); })) }, "刪除")] }
   ], list);
 }
@@ -336,8 +338,29 @@ function confirmDraft(r) {
   });
 }
 
+// 單上沒有里程：只要有日期，就依日期放進時序（不納入 5,000 公里查核）。
+function placeNoKm(r) {
+  const date = r.draftDate ?? r.date ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return alert("請先選日期");
+  mutate("已依日期放進時序", () => {
+    r.date = date; delete r.draftDate; delete r.draftKm;
+    r.noKm = true; r.id = "n" + date.replace(/-/g, "") + "-" + Math.random().toString(36).slice(2, 6);
+  });
+}
+
+// 單據時序（新到舊）：有里程的依里程排；沒有里程的放在日期不晚於它的最後一張有里程單之後。
+function timeline() {
+  const all = ranked(), nk = recs.filter(r => r.noKm).sort((a, b) => a.date.localeCompare(b.date));
+  for (const n of nk) {
+    let at = 0;
+    all.forEach((r, i) => { if (hasKm(r) && r.date <= n.date) at = i + 1; });
+    all.splice(at, 0, n);
+  }
+  return all.reverse();
+}
+
 function deleteRecord(r) {
-  guard(() => mutate(`已刪除 ${fmt(r.km)} 公里這一單`, () => { recs = recs.filter(x => x !== r); }));
+  guard(() => mutate(hasKm(r) ? `已刪除 ${fmt(r.km)} 公里這一單` : `已刪除 ${r.date} 這一單`, () => { recs = recs.filter(x => x !== r); }));
 }
 
 function renderCar() {
@@ -372,9 +395,10 @@ function renderPlan() {
   const P = window.PLAN, pts = checkPoints();
   const ol = document.getElementById("strategy"); ol.replaceChildren(...P.strategy.map(t => h("li", {}, t)));
   const n = k => pts.filter(x => x.state === k).length, last = ranked().at(-1);
+  const noKm = recs.filter(r => r.noKm).length;
   const left = last ? Math.max(0, Math.round((P.scrapKm - last.km) / P.step)) : 0;
   document.getElementById("planSum").textContent = pts.length
-    ? `已查核 ${n("ok") + n("part") + n("miss")} 個點：已保養 ${n("ok")}、僅有單 ${n("part")}、缺 ${n("miss")}。距暫定報廢還有約 ${left} 個查核點。` : "";
+    ? `已查核 ${n("ok") + n("part") + n("miss")} 個點：已保養 ${n("ok")}、僅有單 ${n("part")}、缺 ${n("miss")}。距暫定報廢還有約 ${left} 個查核點。${noKm ? `另有 ${noKm} 張沒有里程的單，不納入查核。` : ""}` : "";
   const label = { ok: "✓ 已保養", part: "△ 僅有單", miss: "✗ 缺", next: "… 下次" };
   table("check", [
     { key: "m", label: "查核點", num: true, cell: x => fmt(x.m) },
@@ -387,7 +411,7 @@ function renderPlan() {
 
 function renderRecords() {
   table("records", [
-    { key: "km", label: "里程", num: true, cell: r => fmt(r.km) },
+    { key: "km", label: "里程", num: true, cell: r => hasKm(r) ? fmt(r.km) : h("span", { class: "s" }, "無里程") },
     { key: "date", label: "日期", cell: r => r.date },
     { key: "shop", label: "廠名", cell: r => r.shop },
     { key: "no", label: "單號", cell: r => r.no || "—" },
@@ -397,8 +421,8 @@ function renderRecords() {
     { key: "ops", label: "", fixed: true, cell: r => h("button", { class: "del", onclick: e => {
       e.stopPropagation(); deleteRecord(r);
     } }, "刪除這單") }
-  ], ranked().reverse(), {
-    key: r => r.km,
+  ], timeline(), {
+    key: r => rid(r),
     detail: r => [h("div", { class: "item" }, h("span", { class: "n s" }, r.items.length ? "明細" : "尚無明細"),
       h("button", { class: "del", onclick: () => deleteRecord(r) }, "刪除這一單")),
     ...r.items.map(i => h("div", { class: "item" },
