@@ -53,8 +53,6 @@ td .s, .s { color: var(--muted); font-size: 12px; }
 tr.click { cursor: pointer; } tr.click:hover td { background: color-mix(in srgb, var(--fg) 4%, transparent); }
 .mv { border: 0; padding: 0 3px; font-size: 13px; color: var(--muted); background: none; opacity: .35; cursor: pointer; }
 th:hover .mv { opacity: 1; }
-.flag { font-size: 12px; margin-left: 6px; }
-.flag.short { color: var(--accent); } .flag.long { color: var(--warn); }
 .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
 .detail td { background: var(--bg); padding: 4px 12px 8px 24px; white-space: normal; }
 .item { display: flex; gap: 10px; align-items: center; padding: 5px 0; font-size: 14px; white-space: nowrap; }
@@ -97,12 +95,6 @@ footer a { color: inherit; cursor: pointer; text-decoration: underline; }
   <h2>單據（每個里程一單，點一列展開）</h2>
   <div class="tw" id="records"></div>
 
-  <h2>項目</h2>
-  <div class="tw" id="items"></div>
-
-  <h2>未處理（依單列出，點一列展開）</h2>
-  <div class="tw" id="open"></div>
-
   <footer>里程相同即同一筆。刪除需要密碼，只為避免誤刪。<a id="reset">還原初始資料</a></footer>
 </main>
 <div id="toast"><span id="toastMsg"></span><button id="undo">復原</button></div>
@@ -137,11 +129,6 @@ function h(tag, props, ...kids) {
 }
 const fmt = n => n.toLocaleString("en-US");
 const money = n => (n ? "$" + fmt(n) : "");
-function monthsAgo(iso) {
-  const d = (Date.now() - new Date(iso)) / 864e5;
-  return d < 45 ? Math.round(d) + " 天前" : Math.round(d / 30.4) + " 個月前";
-}
-
 // ---- 密碼與刪除 ----
 function cyrb53(str, seed = 0) {
   let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
@@ -236,7 +223,7 @@ function table(id, cols, rows, o = {}) {
 // ---- 顯示 ----
 function render() {
   recs.sort((a, b) => (a.km || 1e12) - (b.km || 1e12));
-  renderNext(); renderPending(); renderItems(); renderOpen(); renderRecords();
+  renderNext(); renderPending(); renderRecords();
 }
 
 function renderNext() {
@@ -245,26 +232,6 @@ function renderNext() {
   if (!last) { el.textContent = ""; return; }
   const d = new Date(last.date); d.setMonth(d.getMonth() + 6);
   el.textContent = `下次保養約 ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}（上次 ${last.date} · ${fmt(last.km)} 公里）`;
-}
-
-function renderItems() {
-  const by = {};
-  for (const r of ranked()) for (const i of r.items)
-    if (i.status === "done") (by[i.cat] ||= []).push(r);
-  const rows = Object.entries(by).map(([cat, rs]) => {
-    const last = rs.at(-1), prev = rs.at(-2);
-    const gap = prev ? last.km - prev.km : null, rule = (window.RULES || {})[cat] || {};
-    const flag = gap == null ? null : rule.min && gap < rule.min ? ["short", "偏短"] : rule.max && gap > rule.max ? ["long", "偏長"] : null;
-    return { cat, last, gap, flag };
-  }).sort((a, b) => b.last.km - a.last.km);
-  table("items", [
-    { key: "cat", label: "項目", cell: r => r.cat },
-    { key: "date", label: "上次", cell: r => r.last.date },
-    { key: "ago", label: "距今", cell: r => h("span", { class: "s" }, monthsAgo(r.last.date)) },
-    { key: "km", label: "里程", num: true, cell: r => fmt(r.last.km) },
-    { key: "gap", label: "與前次間隔", num: true, cell: r => [r.gap == null ? "—" : fmt(r.gap),
-      r.flag && h("span", { class: "flag " + r.flag[0] }, r.flag[1])] }
-  ], rows, { empty: "還沒有施作記錄" });
 }
 
 // 原始檔存在這個瀏覽器的 IndexedDB，單上只記檔案 id。
@@ -294,31 +261,6 @@ function guess(name) {
 
 const hasKm = r => Number.isFinite(r.km) && r.km > 0;
 const ranked = () => recs.filter(hasKm).sort((a, b) => a.km - b.km);
-
-// 未處理＝單上標了報價/異常、之後同類項目還沒施作過的項目；仍以「一張單」為單位呈現。
-function openByRecord() {
-  const doneAt = {};
-  for (const r of ranked()) for (const i of r.items)
-    if (i.status === "done") doneAt[i.cat] = Math.max(doneAt[i.cat] || 0, r.km);
-  return ranked().map(r => ({ r, qs: r.items.filter(i => i.status === "quote" && !(doneAt[i.cat] > r.km)) }))
-    .filter(x => x.qs.length).reverse();
-}
-
-function renderOpen() {
-  table("open", [
-    { key: "km", label: "里程", num: true, cell: x => fmt(x.r.km) },
-    { key: "date", label: "日期", cell: x => x.r.date },
-    { key: "what", label: "未處理", fill: true, cell: x => x.qs.map(i => i.name).join("、") },
-    { key: "n", label: "件數", num: true, cell: x => x.qs.length }
-  ], openByRecord(), {
-    empty: "沒有未處理項目", key: x => "o" + x.r.km,
-    detail: x => x.qs.map(i => h("div", { class: "item" },
-      h("span", { class: "n" }, i.name),
-      h("button", { onclick: () => mutate(`${i.name} 已標為施作`, () => { i.status = "done"; }) }, "已施作"),
-      h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一項", () => {
-        x.r.items = x.r.items.filter(y => y !== i); })) }, "刪")))
-  });
-}
 
 function renderPending() {
   const list = recs.filter(r => !hasKm(r));
