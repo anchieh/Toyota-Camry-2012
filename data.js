@@ -88,17 +88,11 @@ window.SEED = [
     ]
   },
   {
-    // 進廠當天的施工單（19:21）列了 6,697；最後結帳單只有保養與雨刷，合計 2,699。
-    // 其餘項目沒有施作，保留為報價。
-    km: 90202, date: "2026-10-07", shop: "耐途耐", no: "1151007013", total: 2699, rev: 1,
+    // 以結帳單為準：只有保養與雨刷，合計 2,699。
+    km: 90202, date: "2026-10-07", shop: "耐途耐", no: "1151007013", total: 2699, rev: 2,
     items: [
       { cat: "機油", name: "5000 公里定期保養（ROOPROW 5W-50 ×4、機油芯）", price: 1999, status: "done" },
-      { cat: "雨刷", name: "雨刷片一組（矽膠）", price: 700, status: "done" },
-      { cat: "冷氣風箱", name: "冷氣風箱保養", price: 899, status: "quote" },
-      { cat: "節氣門", name: "電子節氣門清潔校正", price: 699, status: "quote" },
-      { cat: "變速箱油", name: "變速箱油 6 號油 ×4（每公升 550）", price: 2200, status: "quote" },
-      { cat: "空氣芯", name: "空氣芯", price: 300, status: "quote" },
-      { cat: "冷氣濾網", name: "高效型冷氣濾網", price: 600, status: "quote" }
+      { cat: "雨刷", name: "雨刷片一組（矽膠）", price: 700, status: "done" }
     ]
   }
 ];
