@@ -8,6 +8,7 @@
 :root {
   --bg: #fafaf8; --fg: #1d1d1b; --muted: #77756f; --line: #e4e2dc;
   --card: #ffffff; --accent: #c0392b; --ok: #2e7d4f; --warn: #b7791f;
+  --bar: 52px;
 }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #151514; --fg: #ecebe6; --muted: #98968f; --line: #2c2c2a;
@@ -15,90 +16,120 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg);
-  font: 16px/1.5 system-ui, -apple-system, "Noto Sans TC", "PingFang TC", sans-serif; }
-main { max-width: 640px; margin: 0 auto; padding: 24px 16px 80px; }
-h1 { font-size: 20px; margin: 0 0 4px; }
-h2 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 32px 0 8px; letter-spacing: .04em; }
-.next { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
-#drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 18px; text-align: center;
-  color: var(--muted); font-size: 14px; transition: .15s; }
+  font: 15px/1.4 system-ui, -apple-system, "Noto Sans TC", "PingFang TC", sans-serif; }
+
+/* 固定標題列 */
+.bar { position: sticky; top: 0; z-index: 30; height: var(--bar); background: var(--bg);
+  border-bottom: 1px solid var(--line); }
+.bar > div { max-width: 1100px; margin: 0 auto; height: 100%; padding: 0 16px;
+  display: flex; align-items: center; gap: 16px; }
+.bar h1 { font-size: 18px; margin: 0; white-space: nowrap; }
+.bar .next { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+main { max-width: 1100px; margin: 0 auto; padding: 16px 16px 80px; }
+h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 28px 0 8px; letter-spacing: .04em; }
+#drop { border: 1.5px dashed var(--line); border-radius: 8px; padding: 12px; text-align: center;
+  color: var(--muted); font-size: 13px; }
 #drop.over { border-color: var(--fg); color: var(--fg); background: var(--card); }
+
+/* 表格：每列一行、欄位可移動、表頭固定 */
 table { width: 100%; border-collapse: collapse; background: var(--card);
-  border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-th, td { text-align: left; padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--line); }
-th { color: var(--muted); font-weight: 500; font-size: 12px; }
-tr:last-child td { border-bottom: 0; }
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line);
+  white-space: nowrap; font-size: 14px; }
+thead th { position: sticky; top: var(--bar); z-index: 10; background: var(--card);
+  color: var(--muted); font-weight: 500; font-size: 12px; user-select: none; }
+th[draggable="true"] { cursor: grab; }
+th.dragover { box-shadow: inset 2px 0 0 var(--fg); }
+tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.flag { font-size: 12px; margin-left: 6px; white-space: nowrap; }
-.s { color: var(--muted); font-size: 12px; }
-td .s { display: block; }
-td.num { white-space: nowrap; }
+td.fill { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+input.km { width: 110px; font: inherit; font-size: 13px; padding: 3px 8px; margin-right: 6px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+td .s, .s { color: var(--muted); font-size: 12px; }
+tr.click { cursor: pointer; } tr.click:hover td { background: color-mix(in srgb, var(--fg) 4%, transparent); }
+.mv { border: 0; padding: 0 3px; font-size: 13px; color: var(--muted); background: none; opacity: .35; cursor: pointer; }
+th:hover .mv { opacity: 1; }
+.flag { font-size: 12px; margin-left: 6px; }
 .flag.short { color: var(--accent); } .flag.long { color: var(--warn); }
-.row { display: flex; align-items: center; gap: 8px; background: var(--card);
-  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
-.row .t { flex: 1; min-width: 0; } .row .s { color: var(--muted); font-size: 12px; }
-button { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+.empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+.detail td { background: var(--bg); padding: 4px 12px 8px 24px; white-space: normal; }
+.item { display: flex; gap: 10px; align-items: center; padding: 5px 0; font-size: 14px; white-space: nowrap; }
+.item + .item { border-top: 1px solid var(--line); }
+.item .n { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.item .p { color: var(--muted); font-variant-numeric: tabular-nums; }
+.badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.badge.done { color: var(--ok); border-color: var(--ok); }
+button { font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 6px; cursor: pointer;
   border: 1px solid var(--line); background: transparent; color: var(--fg); }
 button:hover { border-color: var(--fg); }
 button.del { color: var(--accent); }
-details { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; }
-summary { cursor: pointer; padding: 10px 12px; display: flex; gap: 8px; align-items: center; list-style: none; }
-summary::-webkit-details-marker { display: none; }
-summary .t { flex: 1; }
-details > .body { padding: 0 12px 10px; }
-.item { display: flex; gap: 8px; align-items: center; padding: 6px 0; font-size: 14px;
-  border-top: 1px solid var(--line); }
-.item .n { flex: 1; } .item .p { color: var(--muted); font-variant-numeric: tabular-nums; }
-.badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
-.badge.done { color: var(--ok); border-color: var(--ok); }
-.empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+td.ops { text-align: right; } td.ops button + button { margin-left: 6px; }
 #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg);
   color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: 14px; display: none;
-  gap: 12px; align-items: center; max-width: calc(100% - 32px); }
+  gap: 12px; align-items: center; max-width: calc(100% - 32px); z-index: 40; }
 #toast button { color: var(--bg); border-color: var(--bg); }
 footer { margin-top: 32px; font-size: 12px; color: var(--muted); }
 footer a { color: inherit; cursor: pointer; text-decoration: underline; }
+
+/* 窄螢幕：表格可左右捲動，仍不換行 */
+@media (max-width: 640px) {
+  .tw { overflow-x: auto; }
+  thead th { position: static; }
+  td.fill { max-width: none; overflow: visible; }
+  .bar .next { display: none; }
+}
 </style>
 </head>
 <body>
+<div class="bar"><div><h1>Camry 保養記錄</h1><span class="next" id="next"></span></div></div>
 <main>
-  <h1>Camry 保養記錄</h1>
-  <p class="next" id="next"></p>
-
   <div id="drop">把單據檔案拖到這裡</div>
 
+  <section id="pendingSec" hidden>
+    <h2>待補里程（輸入里程後歸入記錄）</h2>
+    <div class="tw" id="pending"></div>
+  </section>
+
   <h2>項目</h2>
-  <div id="items"></div>
+  <div class="tw" id="items"></div>
 
   <h2>未處理</h2>
-  <div id="open"></div>
+  <div class="tw" id="open"></div>
 
-  <h2>記錄（以里程為準）</h2>
-  <div id="records"></div>
+  <h2>記錄（每個里程一單，點一列展開）</h2>
+  <div class="tw" id="records"></div>
 
-  <footer>里程相同即同一筆。<a id="reset">還原初始資料</a></footer>
+  <footer>里程相同即同一筆。刪除需要密碼，只為避免誤刪。<a id="reset">還原初始資料</a></footer>
 </main>
 <div id="toast"><span id="toastMsg"></span><button id="undo">復原</button></div>
 
 <script src="data.js"></script>
 <script>
-const KEY = "camry-records-v1";
+const KEY = "camry-records-v1", COLS_KEY = "camry-cols-v1";
+// 防誤刪用的簡易密碼（只存雜湊；公開頁面本來就不是安全機制）
+const PW_HASH = 3255812791629365;
+
 let recs = load();
+let orders = (() => { try { return JSON.parse(localStorage.getItem(COLS_KEY)) || {}; } catch (e) { return {}; } })();
+const expanded = new Set();
 
 function load() {
   try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {}
   return structuredClone(window.SEED);
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(recs)); } catch (e) {} }
+function saveOrders() { try { localStorage.setItem(COLS_KEY, JSON.stringify(orders)); } catch (e) {} }
 
 function h(tag, props, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
     if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
     else if (k === "class") el.className = v;
-    else el.setAttribute(k, v);
+    else el.setAttribute(k, v === true ? "" : v);
   }
-  for (const kid of kids.flat()) if (kid != null) el.append(kid);
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
   return el;
 }
 const fmt = n => n.toLocaleString("en-US");
@@ -108,7 +139,31 @@ function monthsAgo(iso) {
   return d < 45 ? Math.round(d) + " 天前" : Math.round(d / 30.4) + " 個月前";
 }
 
-// ---- 刪除與復原 ----
+// ---- 密碼與刪除 ----
+function cyrb53(str, seed = 0) {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0, ch; i < str.length; i++) {
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+// 同一個分頁輸入過一次就不再問
+function guard(fn) {
+  let ok = false;
+  try { ok = sessionStorage.getItem("camry-unlock") === "1"; } catch (e) {}
+  if (!ok) {
+    const pw = prompt("輸入密碼才能刪除");
+    if (pw == null) return;
+    if (cyrb53(pw) !== PW_HASH) { alert("密碼不對"); return; }
+    try { sessionStorage.setItem("camry-unlock", "1"); } catch (e) {}
+  }
+  fn();
+}
+
 let snapshot = null, toastTimer;
 function mutate(msg, fn) {
   snapshot = JSON.stringify(recs);
@@ -124,98 +179,176 @@ document.getElementById("undo").onclick = () => {
   recs = JSON.parse(snapshot); snapshot = null; save(); render();
   document.getElementById("toast").style.display = "none";
 };
-document.getElementById("reset").onclick = () => {
+document.getElementById("reset").onclick = () => guard(() => {
   if (confirm("還原成初始資料？你的修改會消失。"))
     mutate("已還原初始資料", () => { recs = structuredClone(window.SEED); });
-};
+});
+
+// ---- 通用表格：欄位可左右移動（按 ‹ › 或拖曳表頭），順序記在瀏覽器 ----
+function orderedCols(id, cols) {
+  const movable = cols.filter(c => !c.fixed), byKey = Object.fromEntries(movable.map(c => [c.key, c]));
+  const out = [];
+  for (const k of orders[id] || []) if (byKey[k]) { out.push(byKey[k]); delete byKey[k]; }
+  for (const c of movable) if (byKey[c.key]) out.push(c);
+  return out.concat(cols.filter(c => c.fixed));
+}
+function reorder(id, cols, from, to) {
+  const keys = orderedCols(id, cols).filter(c => !c.fixed).map(c => c.key);
+  const i = keys.indexOf(from), j = keys.indexOf(to);
+  if (i < 0 || j < 0 || i === j) return;
+  keys.splice(j, 0, keys.splice(i, 1)[0]);
+  orders[id] = keys; saveOrders(); render();
+}
+function step(id, cols, key, dir) {
+  const keys = orderedCols(id, cols).filter(c => !c.fixed).map(c => c.key);
+  const j = keys.indexOf(key) + dir;
+  if (j >= 0 && j < keys.length) reorder(id, cols, key, keys[j]);
+}
+
+function table(id, cols, rows, o = {}) {
+  const box = document.getElementById(id); box.replaceChildren();
+  if (!rows.length) return box.append(h("div", { class: "empty" }, o.empty || "沒有資料"));
+  const cs = orderedCols(id, cols);
+  const head = h("tr", {}, cs.map(c => h("th", {
+    class: c.num ? "num" : "", draggable: !c.fixed,
+    ondragstart: e => e.dataTransfer.setData("text/plain", c.key),
+    ondragover: e => { if (!c.fixed) { e.preventDefault(); e.currentTarget.classList.add("dragover"); } },
+    ondragleave: e => e.currentTarget.classList.remove("dragover"),
+    ondrop: e => { e.preventDefault(); if (!c.fixed) reorder(id, cols, e.dataTransfer.getData("text/plain"), c.key); }
+  },
+    !c.fixed && h("button", { class: "mv", title: "左移", onclick: () => step(id, cols, c.key, -1) }, "‹"),
+    c.label,
+    !c.fixed && h("button", { class: "mv", title: "右移", onclick: () => step(id, cols, c.key, 1) }, "›"))));
+  const body = h("tbody", {});
+  for (const r of rows) {
+    const key = o.key && o.key(r), open = o.detail && expanded.has(key);
+    body.append(h("tr", { class: o.detail ? "click" : "", onclick: o.detail ? () => {
+      expanded.has(key) ? expanded.delete(key) : expanded.add(key); render();
+    } : null }, cs.map(c => h("td", { class: [c.num && "num", c.fill && "fill", c.fixed && "ops"].filter(Boolean).join(" ") }, c.cell(r)))));
+    if (open) body.append(h("tr", { class: "detail" }, h("td", { colspan: cs.length }, o.detail(r))));
+  }
+  box.append(h("table", {}, h("thead", {}, head), body));
+}
 
 // ---- 顯示 ----
 function render() {
-  recs.sort((a, b) => a.km - b.km);
-  renderNext(); renderItems(); renderOpen(); renderRecords();
+  recs.sort((a, b) => (a.km || 1e12) - (b.km || 1e12));
+  renderNext(); renderPending(); renderItems(); renderOpen(); renderRecords();
 }
 
 function renderNext() {
-  const last = [...recs].reverse().find(r => r.items.some(i => i.status === "done"));
+  const last = ranked().reverse().find(r => r.items.some(i => i.status === "done"));
   const el = document.getElementById("next");
   if (!last) { el.textContent = ""; return; }
   const d = new Date(last.date); d.setMonth(d.getMonth() + 6);
-  el.textContent = `下次保養約 ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}（上次 ${last.date}，${fmt(last.km)} 公里）`;
+  el.textContent = `下次保養約 ${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}（上次 ${last.date} · ${fmt(last.km)} 公里）`;
 }
 
 function renderItems() {
   const by = {};
-  for (const r of recs) for (const i of r.items)
+  for (const r of ranked()) for (const i of r.items)
     if (i.status === "done") (by[i.cat] ||= []).push(r);
   const rows = Object.entries(by).map(([cat, rs]) => {
     const last = rs.at(-1), prev = rs.at(-2);
-    const gap = prev ? last.km - prev.km : null;
-    const rule = (window.RULES || {})[cat] || {};
-    let flag = null;
-    if (gap != null && rule.min && gap < rule.min) flag = h("span", { class: "flag short" }, "偏短");
-    if (gap != null && rule.max && gap > rule.max) flag = h("span", { class: "flag long" }, "偏長");
-    return { last, tr: h("tr", {},
-      h("td", {}, cat),
-      h("td", {}, last.date, h("span", { class: "s" }, monthsAgo(last.date))),
-      h("td", { class: "num" }, fmt(last.km)),
-      h("td", { class: "num" }, gap == null ? "—" : fmt(gap), flag)) };
+    const gap = prev ? last.km - prev.km : null, rule = (window.RULES || {})[cat] || {};
+    const flag = gap == null ? null : rule.min && gap < rule.min ? ["short", "偏短"] : rule.max && gap > rule.max ? ["long", "偏長"] : null;
+    return { cat, last, gap, flag };
   }).sort((a, b) => b.last.km - a.last.km);
-  const box = document.getElementById("items"); box.replaceChildren();
-  if (!rows.length) return box.append(h("div", { class: "empty" }, "還沒有施作記錄"));
-  box.append(h("table", {},
-    h("tr", {}, h("th", {}, "項目"), h("th", {}, "上次"), h("th", { class: "num" }, "里程"), h("th", { class: "num" }, "與前次間隔")),
-    rows.map(r => r.tr)));
+  table("items", [
+    { key: "cat", label: "項目", cell: r => r.cat },
+    { key: "date", label: "上次", cell: r => r.last.date },
+    { key: "ago", label: "距今", cell: r => h("span", { class: "s" }, monthsAgo(r.last.date)) },
+    { key: "km", label: "里程", num: true, cell: r => fmt(r.last.km) },
+    { key: "gap", label: "與前次間隔", num: true, cell: r => [r.gap == null ? "—" : fmt(r.gap),
+      r.flag && h("span", { class: "flag " + r.flag[0] }, r.flag[1])] }
+  ], rows, { empty: "還沒有施作記錄" });
 }
+
+const hasKm = r => Number.isFinite(r.km) && r.km > 0;
+const ranked = () => recs.filter(hasKm).sort((a, b) => a.km - b.km);
 
 function openIssues() {
   const doneAt = {};
-  for (const r of recs) for (const i of r.items)
+  for (const r of ranked()) for (const i of r.items)
     if (i.status === "done") doneAt[i.cat] = Math.max(doneAt[i.cat] || 0, r.km);
   const by = {};
-  for (const r of recs) for (const i of r.items)
+  for (const r of ranked()) for (const i of r.items)
     if (i.status === "quote" && !(doneAt[i.cat] > r.km)) (by[i.cat] ||= []).push({ r, i });
-  return Object.entries(by).map(([cat, list]) => ({ cat, list, latest: list.at(-1), first: list[0] }));
+  return Object.entries(by).map(([cat, list]) => ({ cat, list, latest: list.at(-1) }))
+    .sort((a, b) => b.latest.r.km - a.latest.r.km);
 }
 
 function renderOpen() {
-  const box = document.getElementById("open"); box.replaceChildren();
-  const issues = openIssues();
-  if (!issues.length) return box.append(h("div", { class: "empty" }, "沒有未處理項目"));
-  for (const { cat, list, latest, first } of issues) {
-    const since = list.length > 1 ? `，${first.r.date} 起已提報 ${list.length} 次` : "";
-    box.append(h("div", { class: "row" },
-      h("div", { class: "t" }, `${cat}：${latest.i.name}`,
-        h("div", { class: "s" }, `${latest.r.date} · ${fmt(latest.r.km)} 公里${since}`)),
-      h("button", { onclick: () => mutate(`${cat} 已標為施作`, () => { latest.i.status = "done"; }) }, "已施作"),
-      h("button", { class: "del", onclick: () => mutate(`已刪除 ${cat}`, () => {
-        for (const r of recs) r.items = r.items.filter(i => !(i.cat === cat && i.status === "quote"));
-      }) }, "刪除")));
+  table("open", [
+    { key: "cat", label: "項目", cell: x => x.cat },
+    { key: "name", label: "內容", fill: true, cell: x => x.latest.i.name },
+    { key: "date", label: "提報日", cell: x => x.latest.r.date },
+    { key: "km", label: "里程", num: true, cell: x => fmt(x.latest.r.km) },
+    { key: "count", label: "提報次數", num: true, cell: x => x.list.length },
+    { key: "ops", label: "", fixed: true, cell: x => [
+      h("button", { onclick: () => mutate(`${x.cat} 已標為施作`, () => { x.latest.i.status = "done"; }) }, "已施作"),
+      h("button", { class: "del", onclick: () => guard(() => mutate(`已刪除 ${x.cat}`, () => {
+        for (const r of recs) r.items = r.items.filter(i => !(i.cat === x.cat && i.status === "quote"));
+      })) }, "刪除")] }
+  ], openIssues(), { empty: "沒有未處理項目" });
+}
+
+function renderPending() {
+  const list = recs.filter(r => !hasKm(r));
+  document.getElementById("pendingSec").hidden = !list.length;
+  table("pending", [
+    { key: "date", label: "日期", cell: r => r.date || "—" },
+    { key: "shop", label: "廠名", cell: r => r.shop || "—" },
+    { key: "no", label: "單號", cell: r => r.no || "—" },
+    { key: "total", label: "金額", num: true, cell: r => money(r.total) || "—" },
+    { key: "names", label: "內容", fill: true, cell: r => r.items.map(i => i.name).join("、") },
+    { key: "ops", label: "", fixed: true, cell: r => {
+      const inp = h("input", { type: "number", inputmode: "numeric", placeholder: "輸入里程", class: "km" });
+      const ok = () => setKm(r, Number(inp.value));
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") ok(); });
+      return [inp, h("button", { onclick: ok }, "確認"),
+        h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一筆單據", () => { recs = recs.filter(x => x !== r); })) }, "刪除")];
+    } }
+  ], list);
+}
+
+// 里程相同 → 同一單：補上新項目；已有的報價若在新單變成已施作，就更新狀態。
+function mergeInto(cur, inc) {
+  for (const i of inc.items) {
+    const same = cur.items.find(x => x.cat === i.cat && x.name === i.name);
+    if (!same) cur.items.push(i);
+    else if (same.status === "quote" && i.status === "done") same.status = "done";
   }
+  cur.total = cur.total || inc.total; cur.date ||= inc.date; cur.shop ||= inc.shop; cur.no ||= inc.no;
+}
+function setKm(r, km) {
+  if (!Number.isInteger(km) || km <= 0) { alert("請輸入里程（正整數公里）"); return; }
+  const cur = recs.find(x => x !== r && x.km === km);
+  mutate(cur ? `已併入 ${fmt(km)} 公里的記錄` : `已設定里程 ${fmt(km)} 公里`, () => {
+    if (cur) { mergeInto(cur, r); recs = recs.filter(x => x !== r); } else r.km = km;
+  });
 }
 
 function renderRecords() {
-  const box = document.getElementById("records"); box.replaceChildren();
-  for (const r of [...recs].reverse()) {
-    const hasDone = r.items.some(i => i.status === "done");
-    box.append(h("details", {},
-      h("summary", {},
-        h("span", { class: "t" }, `${fmt(r.km)} 公里`, h("span", { class: "s" }, `  ${r.date} · ${r.shop}`)),
-        h("span", { class: "s" }, money(r.total))),
-      h("div", { class: "body" },
-        r.items.map(i => h("div", { class: "item" },
-          h("span", { class: "badge " + i.status }, i.status === "done" ? "已施作" : "報價"),
-          h("span", { class: "n" }, i.name),
-          h("span", { class: "p" }, money(i.price)),
-          h("button", { class: "del", onclick: () => {
-            if (i.status === "done" && !confirm(`刪除已施作記錄「${i.name}」？`)) return;
-            mutate("已刪除一項", () => { r.items = r.items.filter(x => x !== i); });
-          } }, "刪"))),
-        h("div", { class: "item" }, h("span", { class: "n" }, ""),
-          h("button", { class: "del", onclick: () => {
-            if (hasDone && !confirm(`刪除整筆 ${fmt(r.km)} 公里的記錄？其中有已施作項目。`)) return;
-            mutate(`已刪除 ${fmt(r.km)} 公里的記錄`, () => { recs = recs.filter(x => x !== r); });
-          } }, "刪除整筆")))));
-  }
+  table("records", [
+    { key: "km", label: "里程", num: true, cell: r => fmt(r.km) },
+    { key: "date", label: "日期", cell: r => r.date },
+    { key: "shop", label: "廠名", cell: r => r.shop },
+    { key: "no", label: "單號", cell: r => r.no || "—" },
+    { key: "total", label: "金額", num: true, cell: r => money(r.total) || "—" },
+    { key: "n", label: "項目數", num: true, cell: r => r.items.length },
+    { key: "ops", label: "", fixed: true, cell: r => h("button", { class: "del", onclick: e => {
+      e.stopPropagation();
+      guard(() => mutate(`已刪除 ${fmt(r.km)} 公里的記錄`, () => { recs = recs.filter(x => x !== r); }));
+    } }, "刪除整筆") }
+  ], ranked().reverse(), {
+    key: r => r.km,
+    detail: r => r.items.map(i => h("div", { class: "item" },
+      h("span", { class: "badge " + i.status }, i.status === "done" ? "已施作" : "報價"),
+      h("span", { class: "n" }, i.name),
+      h("span", { class: "p" }, money(i.price)),
+      h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一項", () => { r.items = r.items.filter(x => x !== i); })) }, "刪")))
+  });
 }
 
 // ---- 拖入 ----
@@ -223,28 +356,20 @@ const drop = document.getElementById("drop");
 ["dragenter", "dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", async ev => {
-  const files = [...ev.dataTransfer.files];
   const others = [];
-  for (const f of files) {
+  for (const f of [...ev.dataTransfer.files]) {
     if (!/\.json$/i.test(f.name)) { others.push(f.name); continue; }
     try { importJson(JSON.parse(await f.text())); } catch (e) { alert(`${f.name} 不是有效的記錄檔`); }
   }
   if (others.length) alert("圖片、PDF、Word 需要先交給 Claude 整理成記錄檔：\n" + others.join("\n"));
 });
 
-// 里程相同 → 同一筆：補上新項目；已有的報價若在新檔變成已施作，就更新狀態。
 function importJson(data) {
   const list = Array.isArray(data) ? data : [data];
   mutate(`已匯入 ${list.length} 筆`, () => {
     for (const inc of list) {
-      const cur = recs.find(r => r.km === inc.km);
-      if (!cur) { recs.push(inc); continue; }
-      for (const i of inc.items) {
-        const same = cur.items.find(x => x.cat === i.cat && x.name === i.name);
-        if (!same) cur.items.push(i);
-        else if (same.status === "quote" && i.status === "done") same.status = "done";
-      }
-      cur.total = inc.total || cur.total;
+      const cur = hasKm(inc) ? recs.find(r => r.km === inc.km) : null;
+      if (cur) mergeInto(cur, inc); else recs.push(inc);
     }
   });
 }
