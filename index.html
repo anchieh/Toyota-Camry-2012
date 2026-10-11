@@ -336,7 +336,8 @@ function deleteRecord(r) {
 function renderCar() {
   const c = window.CAR, P = window.PLAN, last = ranked().at(-1);
   const rows = [
-    ["車款", c.model], ["年份", c.year], ["缸數", c.cylinders], ["排氣量", c.displacement],
+    ["車款", c.model], ["出廠", c.year], ["型式", c.type], ["引擎", c.engine],
+    ["排氣量", c.displacement], ["缸數", c.cylinders], ["座位／顏色", c.seats],
     ["火星塞", c.plug], ["使用機油", c.oil],
     ["最近一單", last ? `${fmt(last.km)} 公里（${last.date}）` : null],
     ["保養週期", `每 ${fmt(P.step)} 公里，容許前後 ${fmt(P.tol)} 公里`],

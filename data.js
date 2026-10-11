@@ -68,10 +68,13 @@ window.SEED = [
 
 // 車輛參數：來自單據的事實。null 代表還沒確認，頁面會顯示「待補」。
 window.CAR = {
-  model: "Toyota Camry（冠美麗）",
-  year: "2012",
+  model: "Toyota Camry（冠美麗，國瑞）",
+  year: "2012 年 1 月出廠",
+  type: "ASV50L",
+  engine: "2AR",
+  displacement: "2,494 cc（汽油）",
   cylinders: "四缸（單上換火星塞 4 顆）",
-  displacement: null,
+  seats: "5 人座，黑色",
   plug: "SK16HR11 銥合金",
   oil: "ROOPROW 5W-50 全合成，約 4 公升＋機油芯（依單據）"
 };
