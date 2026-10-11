@@ -100,7 +100,7 @@ footer a { color: inherit; cursor: pointer; text-decoration: underline; }
   <h2>項目</h2>
   <div class="tw" id="items"></div>
 
-  <h2>未處理</h2>
+  <h2>未處理（依單列出，點一列展開）</h2>
   <div class="tw" id="open"></div>
 
   <footer>里程相同即同一筆。刪除需要密碼，只為避免誤刪。<a id="reset">還原初始資料</a></footer>
@@ -295,30 +295,29 @@ function guess(name) {
 const hasKm = r => Number.isFinite(r.km) && r.km > 0;
 const ranked = () => recs.filter(hasKm).sort((a, b) => a.km - b.km);
 
-function openIssues() {
+// 未處理＝單上標了報價/異常、之後同類項目還沒施作過的項目；仍以「一張單」為單位呈現。
+function openByRecord() {
   const doneAt = {};
   for (const r of ranked()) for (const i of r.items)
     if (i.status === "done") doneAt[i.cat] = Math.max(doneAt[i.cat] || 0, r.km);
-  const by = {};
-  for (const r of ranked()) for (const i of r.items)
-    if (i.status === "quote" && !(doneAt[i.cat] > r.km)) (by[i.cat] ||= []).push({ r, i });
-  return Object.entries(by).map(([cat, list]) => ({ cat, list, latest: list.at(-1) }))
-    .sort((a, b) => b.latest.r.km - a.latest.r.km);
+  return ranked().map(r => ({ r, qs: r.items.filter(i => i.status === "quote" && !(doneAt[i.cat] > r.km)) }))
+    .filter(x => x.qs.length).reverse();
 }
 
 function renderOpen() {
   table("open", [
-    { key: "cat", label: "項目", cell: x => x.cat },
-    { key: "name", label: "內容", fill: true, cell: x => x.latest.i.name },
-    { key: "date", label: "提報日", cell: x => x.latest.r.date },
-    { key: "km", label: "里程", num: true, cell: x => fmt(x.latest.r.km) },
-    { key: "count", label: "提報次數", num: true, cell: x => x.list.length },
-    { key: "ops", label: "", fixed: true, cell: x => [
-      h("button", { onclick: () => mutate(`${x.cat} 已標為施作`, () => { x.latest.i.status = "done"; }) }, "已施作"),
-      h("button", { class: "del", onclick: () => guard(() => mutate(`已刪除 ${x.cat}`, () => {
-        for (const r of recs) r.items = r.items.filter(i => !(i.cat === x.cat && i.status === "quote"));
-      })) }, "刪除")] }
-  ], openIssues(), { empty: "沒有未處理項目" });
+    { key: "km", label: "里程", num: true, cell: x => fmt(x.r.km) },
+    { key: "date", label: "日期", cell: x => x.r.date },
+    { key: "what", label: "未處理", fill: true, cell: x => x.qs.map(i => i.name).join("、") },
+    { key: "n", label: "件數", num: true, cell: x => x.qs.length }
+  ], openByRecord(), {
+    empty: "沒有未處理項目", key: x => "o" + x.r.km,
+    detail: x => x.qs.map(i => h("div", { class: "item" },
+      h("span", { class: "n" }, i.name),
+      h("button", { onclick: () => mutate(`${i.name} 已標為施作`, () => { i.status = "done"; }) }, "已施作"),
+      h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一項", () => {
+        x.r.items = x.r.items.filter(y => y !== i); })) }, "刪")))
+  });
 }
 
 function renderPending() {
