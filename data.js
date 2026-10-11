@@ -32,9 +32,9 @@ window.SEED = [
     ]
   },
   {
-    // 2025-10-15：只有一行記事（傳動軸油封 NTD 1,800），沒有里程、店名。
+    // 2025-10-15：只有一行記事（傳動軸油封 NTD 1,800），沒有里程。
     // 變速箱油是依你的說明補記：換傳動軸油封要拆傳動軸，變速箱油會流失，需補（或換），單上沒有單獨列價。
-    id: "n20251015", noKm: true, date: "2025-10-15", shop: "", no: "", total: 1800,
+    id: "n20251015", noKm: true, date: "2025-10-15", shop: "昌鑫汽車修護", no: "", total: 1800, rev: 1,
     items: [
       { cat: "傳動軸油封", name: "傳動軸油封", price: 1800, status: "done" },
       { cat: "變速箱油", name: "變速箱油（更換油封時一併補換，單上未列）", price: 0, status: "done" }
@@ -88,10 +88,17 @@ window.SEED = [
     ]
   },
   {
-    km: 90202, date: "2026-10-07", shop: "耐途耐", no: "1151007013", total: 2699,
+    // 進廠當天的施工單（19:21）列了 6,697；最後結帳單只有保養與雨刷，合計 2,699。
+    // 其餘項目沒有施作，保留為報價。
+    km: 90202, date: "2026-10-07", shop: "耐途耐", no: "1151007013", total: 2699, rev: 1,
     items: [
       { cat: "機油", name: "5000 公里定期保養（ROOPROW 5W-50 ×4、機油芯）", price: 1999, status: "done" },
-      { cat: "雨刷", name: "雨刷片一組（矽膠）", price: 700, status: "done" }
+      { cat: "雨刷", name: "雨刷片一組（矽膠）", price: 700, status: "done" },
+      { cat: "冷氣風箱", name: "冷氣風箱保養", price: 899, status: "quote" },
+      { cat: "節氣門", name: "電子節氣門清潔校正", price: 699, status: "quote" },
+      { cat: "變速箱油", name: "變速箱油 6 號油 ×4（每公升 550）", price: 2200, status: "quote" },
+      { cat: "空氣芯", name: "空氣芯", price: 300, status: "quote" },
+      { cat: "冷氣濾網", name: "高效型冷氣濾網", price: 600, status: "quote" }
     ]
   }
 ];
