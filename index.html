@@ -66,6 +66,15 @@ button { font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 6px; 
 button:hover { border-color: var(--fg); }
 button.del { color: var(--accent); }
 td.ops { text-align: right; } td.ops button + button { margin-left: 6px; }
+dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; margin: 0; padding: 10px 12px;
+  background: var(--card); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+dl.kv dt { color: var(--muted); font-size: 13px; } dl.kv dd { margin: 0; font-size: 14px; }
+dl.kv dd.todo { color: var(--muted); }
+ol.plan { margin: 0; padding: 10px 12px 10px 32px; background: var(--card); font-size: 14px;
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+ol.plan li + li { margin-top: 4px; }
+p.sum { margin: 12px 0 8px; font-size: 14px; }
+.res.ok { color: var(--ok); } .res.part { color: var(--warn); } .res.miss { color: var(--accent); } .res.next { color: var(--muted); }
 #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--fg);
   color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: 14px; display: none;
   gap: 12px; align-items: center; max-width: calc(100% - 32px); z-index: 40; }
@@ -94,6 +103,14 @@ footer a { color: inherit; cursor: pointer; text-decoration: underline; }
 
   <h2>單據（每個里程一單，點一列展開）</h2>
   <div class="tw" id="records"></div>
+
+  <h2>車輛參數</h2>
+  <dl class="kv" id="car"></dl>
+
+  <h2>保養策略（到報廢）</h2>
+  <ol class="plan" id="strategy"></ol>
+  <p class="sum" id="planSum"></p>
+  <div class="tw" id="check"></div>
 
   <footer>里程相同即同一筆。刪除需要密碼，只為避免誤刪。<a id="reset">還原初始資料</a></footer>
 </main>
@@ -234,7 +251,7 @@ function table(id, cols, rows, o = {}) {
 // ---- 顯示 ----
 function render() {
   recs.sort((a, b) => (a.km || 1e12) - (b.km || 1e12));
-  renderNext(); renderPending(); renderRecords();
+  renderNext(); renderPending(); renderRecords(); renderCar(); renderPlan();
 }
 
 function renderNext() {
@@ -314,6 +331,50 @@ function confirmDraft(r) {
 
 function deleteRecord(r) {
   guard(() => mutate(`已刪除 ${fmt(r.km)} 公里這一單`, () => { recs = recs.filter(x => x !== r); }));
+}
+
+function renderCar() {
+  const c = window.CAR, P = window.PLAN, last = ranked().at(-1);
+  const rows = [
+    ["車款", c.model], ["年份", c.year], ["缸數", c.cylinders], ["排氣量", c.displacement],
+    ["火星塞", c.plug], ["使用機油", c.oil],
+    ["最近一單", last ? `${fmt(last.km)} 公里（${last.date}）` : null],
+    ["保養週期", `每 ${fmt(P.step)} 公里，容許前後 ${fmt(P.tol)} 公里`],
+    ["暫定報廢里程", `${fmt(P.scrapKm)} 公里`]];
+  const box = document.getElementById("car"); box.replaceChildren();
+  for (const [k, v] of rows) box.append(h("dt", {}, k), h("dd", { class: v ? "" : "todo" }, v || "待補"));
+}
+
+// 查核點：每 step 公里一個，範圍是 [點−tol, 點+tol)，因此每張單剛好落在一個查核點。
+// 從有記錄的第一個查核點起，查到最近一單所在的查核點，再多列下一個。
+function checkPoints() {
+  const { step, tol } = window.PLAN, rs = ranked();
+  if (!rs.length) return [];
+  const first = Math.round(rs[0].km / step) * step, last = Math.round(rs.at(-1).km / step) * step;
+  const out = [];
+  for (let m = first; m <= last + step; m += step) {
+    const inWin = rs.filter(r => r.km >= m - tol && r.km < m + tol);
+    const state = m > last ? "next" : inWin.some(r => r.items.some(i => i.status === "done")) ? "ok" : inWin.length ? "part" : "miss";
+    out.push({ m, lo: m - tol, hi: m + tol - 1, inWin, state });
+  }
+  return out.reverse();
+}
+
+function renderPlan() {
+  const P = window.PLAN, pts = checkPoints();
+  const ol = document.getElementById("strategy"); ol.replaceChildren(...P.strategy.map(t => h("li", {}, t)));
+  const n = k => pts.filter(x => x.state === k).length, last = ranked().at(-1);
+  const left = last ? Math.max(0, Math.round((P.scrapKm - last.km) / P.step)) : 0;
+  document.getElementById("planSum").textContent = pts.length
+    ? `已查核 ${n("ok") + n("part") + n("miss")} 個點：已保養 ${n("ok")}、僅有單 ${n("part")}、缺 ${n("miss")}。距暫定報廢還有約 ${left} 個查核點。` : "";
+  const label = { ok: "✓ 已保養", part: "△ 僅有單", miss: "✗ 缺", next: "… 下次" };
+  table("check", [
+    { key: "m", label: "查核點", num: true, cell: x => fmt(x.m) },
+    { key: "range", label: "範圍", cell: x => `${fmt(x.lo)} – ${fmt(x.hi)}` },
+    { key: "res", label: "結果", cell: x => h("span", { class: "res " + x.state }, label[x.state]) },
+    { key: "recs", label: "對應單據", fill: true, cell: x => x.inWin.length
+        ? x.inWin.map(r => `${fmt(r.km)}（${r.km >= x.m ? "+" : "−"}${fmt(Math.abs(r.km - x.m))}，${r.date}）`).join("　") : "—" }
+  ], pts, { empty: "還沒有單據可查核" });
 }
 
 function renderRecords() {
