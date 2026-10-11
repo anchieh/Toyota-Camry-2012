@@ -278,7 +278,8 @@ const idb = (() => {
   const tx = async (mode, fn) => { const d = await open(); return new Promise((res, rej) => {
     const t = d.transaction("f", mode), r = fn(t.objectStore("f"));
     t.oncomplete = () => res(r.result); t.onerror = () => rej(t.error); }); };
-  return { put: (k, v) => tx("readwrite", s => s.put(v, k)), get: k => tx("readonly", s => s.get(k)) };
+  return { put: (k, v) => tx("readwrite", s => s.put(v, k)), get: k => tx("readonly", s => s.get(k)),
+    keys: () => tx("readonly", s => s.getAllKeys()), del: k => tx("readwrite", s => s.delete(k)) };
 })();
 async function openFile(f) {
   let blob; try { blob = await idb.get(f.id); } catch (e) {}
@@ -358,6 +359,10 @@ function confirmDraft(r) {
   });
 }
 
+function deleteRecord(r) {
+  guard(() => mutate(`已刪除 ${fmt(r.km)} 公里這一單`, () => { recs = recs.filter(x => x !== r); }));
+}
+
 function renderRecords() {
   table("records", [
     { key: "km", label: "里程", num: true, cell: r => fmt(r.km) },
@@ -368,16 +373,17 @@ function renderRecords() {
     { key: "n", label: "項目數", num: true, cell: r => r.items.length },
     { key: "file", label: "原始檔", cell: r => r.file ? h("a", { href: "#", class: "f", onclick: e => { e.preventDefault(); e.stopPropagation(); openFile(r.file); } }, r.file.name) : "—" },
     { key: "ops", label: "", fixed: true, cell: r => h("button", { class: "del", onclick: e => {
-      e.stopPropagation();
-      guard(() => mutate(`已刪除 ${fmt(r.km)} 公里的記錄`, () => { recs = recs.filter(x => x !== r); }));
-    } }, "刪除整筆") }
+      e.stopPropagation(); deleteRecord(r);
+    } }, "刪除這單") }
   ], ranked().reverse(), {
     key: r => r.km,
-    detail: r => r.items.map(i => h("div", { class: "item" },
+    detail: r => [h("div", { class: "item" }, h("span", { class: "n s" }, r.items.length ? "明細" : "尚無明細"),
+      h("button", { class: "del", onclick: () => deleteRecord(r) }, "刪除這一單")),
+    ...r.items.map(i => h("div", { class: "item" },
       h("span", { class: "badge " + i.status }, i.status === "done" ? "已施作" : "報價"),
       h("span", { class: "n" }, i.name),
       h("span", { class: "p" }, money(i.price)),
-      h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一項", () => { r.items = r.items.filter(x => x !== i); })) }, "刪")))
+      h("button", { class: "del", onclick: () => guard(() => mutate("已刪除一項", () => { r.items = r.items.filter(x => x !== i); })) }, "刪")))]
   });
 }
 
@@ -415,6 +421,7 @@ function importJson(data) {
 }
 
 render();
+idb.keys().then(ks => { const used = new Set(recs.map(r => r.file && r.file.id)); ks.filter(k => !used.has(k)).forEach(k => idb.del(k)); }).catch(() => {});
 </script>
 </body>
 </html>
