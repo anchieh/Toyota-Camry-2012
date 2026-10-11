@@ -1,4 +1,5 @@
 // 記錄以「里程」為唯一鍵，里程相同即同一筆。
+// rev：這一單在 data.js 修正過就加一，已存資料的瀏覽器會改用新版（保留原始檔連結）。
 // item.status: "done" 已施作 / "quote" 報價或檢查異常（未施作）
 // item.cat: 項目分類，清單以此歸戶。
 
@@ -31,18 +32,20 @@ window.SEED = [
     ]
   },
   {
-    km: 75306, date: "2026-02-03", shop: "耐途耐", no: "", total: 0,
+    km: 75306, date: "2026-02-03", shop: "耐途耐", no: "1150203001", total: 5748, rev: 1,
     items: [
+      { cat: "機油", name: "5000 公里定期保養（ROOPROW 5W-50 ×4、機油芯）", price: 1999, status: "done" },
+      { cat: "引擎積碳", name: "燃燒室積碳清洗", price: 999, status: "done" },
+      { cat: "皮帶", name: "綜合皮帶", price: 1650, status: "done" },
+      { cat: "排氣管吊耳", name: "排氣管吊耳（矽膠）", price: 600, status: "done" },
+      { cat: "工資", name: "更換零件工資", price: 500, status: "done" },
+      { cat: "輪胎", name: "補胎", price: 0, status: "done" },
       { cat: "冷氣濾網", name: "冷氣濾網過髒", price: 0, status: "quote" },
       { cat: "冷氣風箱", name: "冷氣風箱過髒", price: 0, status: "quote" },
-      { cat: "機油", name: "機油達保養里程", price: 0, status: "quote" },
       { cat: "雨刷水", name: "前雨刷水量不足", price: 0, status: "quote" },
       { cat: "節氣門", name: "電子節氣門積碳", price: 0, status: "quote" },
       { cat: "火星塞", name: "火星塞間隙過大", price: 0, status: "quote" },
-      { cat: "引擎積碳", name: "內燃機嚴重積碳", price: 0, status: "quote" },
-      { cat: "皮帶", name: "綜合皮帶已龜裂", price: 0, status: "quote" },
-      { cat: "輪胎", name: "四輪胎壓不足、右前輪胎異常", price: 0, status: "quote" },
-      { cat: "排氣管吊耳", name: "排氣管吊耳斷裂", price: 0, status: "quote" }
+      { cat: "輪胎", name: "四輪胎壓不足、右前輪胎異常", price: 0, status: "quote" }
     ]
   },
   {

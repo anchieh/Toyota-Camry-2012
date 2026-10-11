@@ -137,6 +137,10 @@ function load() {
       // data.js 之後新增的單要補進來；你已刪除的舊單不會復活。
       const seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[61262,68458,75306,81724]"));
       for (const r of window.SEED) if (!seen.has(r.km) && !stored.some(x => x.km === r.km)) stored.push(structuredClone(r));
+      for (const r of window.SEED) {
+        const i = stored.findIndex(x => x.km === r.km);
+        if (r.rev && i >= 0 && (stored[i].rev || 0) < r.rev) stored[i] = { ...structuredClone(r), file: stored[i].file };
+      }
       localStorage.setItem(SEEN_KEY, JSON.stringify(window.SEED.map(r => r.km)));
       localStorage.setItem(KEY, JSON.stringify(stored));
       return stored;
